@@ -1,0 +1,25 @@
+import { NextResponse } from 'next/server';
+
+import { env } from '@/lib/env';
+import { createPkcePair, storePkceValues } from '@/lib/auth/pkce';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  const { codeChallenge, codeVerifier, state } = createPkcePair();
+  storePkceValues({ codeVerifier, state });
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: env.SPOTIFY_CLIENT_ID,
+    redirect_uri: env.SPOTIFY_REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: codeChallenge,
+    scope: env.SPOTIFY_SCOPES,
+    state
+  });
+
+  return NextResponse.redirect(
+    `https://accounts.spotify.com/authorize?${params.toString()}`
+  );
+}

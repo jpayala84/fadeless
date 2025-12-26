@@ -1,0 +1,404 @@
+import Link from "next/link";
+
+import { LandingHero } from "@/components/landing-hero";
+import { DashboardHeader } from "@/components/dashboard-header";
+import { RemovedList } from "@/components/removed-list";
+import { NotificationPreferenceForm } from "@/components/notification-preference-form";
+import { LibraryPanel } from "@/components/library-panel";
+import { TrackTable } from "@/components/track-table";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import {
+  createRemovalEventRepository,
+  listRemovalEvents,
+  listRemovalEventsForWeek
+} from "@/lib/db/removal-repository";
+import { createSnapshotRepository } from "@/lib/db/snapshot-repository";
+import { attachRemovalArtwork } from "@/lib/removals/with-artwork";
+import { runDailyScan } from "@/lib/jobs/daily-scan";
+import { getLibraryOverview } from "@/lib/spotify/library";
+import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
+import type { PlaylistTrack, SpotifyTrack } from "@/lib/spotify/client";
+
+const subtractDays = (days: number) =>
+  new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+type DashboardView = "weekly" | "archive" | "settings";
+
+type PageProps = {
+  searchParams?: {
+    playlist?: string;
+    playlistPage?: string;
+    view?: DashboardView;
+    collection?: string;
+    collectionId?: string;
+    collectionName?: string;
+  };
+};
+
+const HomePage = async ({ searchParams }: PageProps) => {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-background text-foreground">
+        <LandingHero />
+      </main>
+    );
+  }
+
+  const playlistPage = Number(searchParams?.playlistPage ?? "0") || 0;
+  const viewParam = searchParams?.view;
+  const view: DashboardView =
+    viewParam === "archive" || viewParam === "settings" ? viewParam : "weekly";
+
+  const snapshotRepo = createSnapshotRepository();
+  const existingSnapshot = await snapshotRepo.latestSnapshot(user.id, {
+    type: "liked"
+  });
+  const needsBootstrap = existingSnapshot.length === 0;
+
+  if (needsBootstrap) {
+    try {
+      await runAutoScan(user.id);
+    } catch (error) {
+      console.error("[AutoScan]", error);
+    }
+  }
+
+  const collectionParam = searchParams?.collection;
+  const collectionType: "playlist" | "liked" | "album" | undefined =
+    collectionParam === "playlist" ||
+    collectionParam === "liked" ||
+    collectionParam === "album"
+      ? collectionParam
+      : undefined;
+  const collectionId = searchParams?.collectionId;
+  const collectionName = searchParams?.collectionName;
+
+  const [weeklyRaw, allRaw, library] = await Promise.all([
+    listRemovalEventsForWeek({
+      userId: user.id,
+      since: subtractDays(7)
+    }),
+    listRemovalEvents({
+      userId: user.id,
+      limit: 250
+    }),
+    getLibraryOverview(user.id)
+  ]);
+  const [weekly, all] = await Promise.all([
+    attachRemovalArtwork(user.id, weeklyRaw),
+    attachRemovalArtwork(user.id, allRaw)
+  ]);
+
+  const client = getSpotifyClient();
+  const mapToRows = (tracks: SpotifyTrack[]) =>
+    tracks.map((track) => ({
+      id: track.id ?? `${track.name}-${track.album}`,
+      name: track.name,
+      artists: track.artists,
+      imageUrl: track.imageUrl,
+      durationMs: track.durationMs
+    }));
+
+  let playlistPreview: PlaylistTrack[] = [];
+  if (collectionType === "playlist" && collectionId) {
+    playlistPreview = await withAccessToken(user.id, (accessToken) =>
+      client
+        .fetchPlaylistPreview(accessToken, collectionId, collectionName)
+        .catch(() => [])
+    );
+  }
+
+  let trackTableData:
+    | {
+        title: string;
+        subtitle?: string;
+        tracks: Array<{
+          id: string;
+          name: string;
+          artists: string[];
+          imageUrl?: string;
+          durationMs?: number;
+        }>;
+      }
+    | null = null;
+
+  if (collectionType === "playlist" && collectionId) {
+    const playlistTracks = await withAccessToken(user.id, (accessToken) =>
+      client
+        .fetchPlaylistTracks(accessToken, collectionId, collectionName)
+        .catch(() => [])
+    );
+    const playlistMeta =
+      library.playlists.find((playlist) => playlist.id === collectionId) ?? null;
+    trackTableData = {
+      title: collectionName ?? playlistMeta?.name ?? "Playlist",
+      subtitle: `${playlistTracks.length} tracks`,
+      tracks: mapToRows(playlistTracks)
+    };
+  } else if (collectionType === "liked") {
+    const likedTracks = await withAccessToken(user.id, (accessToken) =>
+      client.fetchLikedTracks(accessToken, { maxPages: 4 }).catch(() => [])
+    );
+    trackTableData = {
+      title: "Liked Songs",
+      subtitle: `${likedTracks.length} tracks`,
+      tracks: mapToRows(likedTracks)
+    };
+  } else if (collectionType === "album" && collectionId) {
+    const albumTracks = await withAccessToken(user.id, (accessToken) =>
+      client.fetchAlbumTracks(accessToken, collectionId).catch(() => [])
+    );
+    trackTableData = {
+      title: collectionName ?? "Album",
+      subtitle: `${albumTracks.length} tracks`,
+      tracks: mapToRows(albumTracks)
+    };
+  }
+
+  const now = new Date();
+  const monthlyRemoved = all.filter(
+    (event) =>
+      event.removedAt.getMonth() === now.getMonth() &&
+      event.removedAt.getFullYear() === now.getFullYear()
+  ).length;
+  const playlistsAffected = new Set(
+    all.flatMap((event) => event.playlistNames ?? [])
+  ).size;
+  const replacementCount = all.filter(
+    (event) => Boolean(event.replacementTrackId)
+  ).length;
+
+  const buildHref = (overrides: Record<string, string | undefined>) =>
+    buildQuery(searchParams, overrides);
+
+  const hasHistory = all.length > 0;
+  const weeklyEmptyMessage = hasHistory
+    ? "No removals recorded in the last 7 days."
+    : "We need a baseline snapshot first. Run a scan to capture your library.";
+  const archiveEmptyMessage = hasHistory
+    ? "All detected removals will show here once the next scan completes."
+    : "Run your first scan to populate the archive.";
+
+  const stats = [
+    {
+      label: "Removed this month",
+      value: `${monthlyRemoved} tracks`,
+      helper: weekly.length ? `+${weekly.length} this week` : "Run a scan to begin"
+    },
+    {
+      label: "Playlists affected",
+      value: `${playlistsAffected} playlists`,
+      helper:
+        library.playlists.slice(0, 3).map((playlist) => playlist.name).join(", ") ||
+        "Scans populate playlist impact."
+    },
+    {
+      label: "Replacement matches",
+      value: `${replacementCount} suggestions`,
+      helper: replacementCount ? "All pending review" : "Matches appear after scans"
+    }
+  ];
+
+  const tabs: Array<{ id: DashboardView; label: string }> = [
+    { id: "weekly", label: "Removed This Week" },
+    { id: "archive", label: "All Removed Songs" }
+  ];
+
+  return (
+    <main className="min-h-screen bg-[#020202] text-foreground">
+      <DashboardHeader user={user} view={view} />
+      <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">
+        <section className="space-y-6">
+          <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-gradient-to-r from-[#0d0d0d] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
+                Auto scan
+              </p>
+              <h2 className="text-2xl font-semibold">Latest snapshot synced</h2>
+              <p className="text-sm text-muted-foreground">
+                We automatically scanned your Liked Songs as soon as you signed in. Manual scans are still available from the sidebar for playlists.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Completed at{" "}
+              {new Intl.DateTimeFormat("en", {
+                hour: "numeric",
+                minute: "2-digit"
+              }).format(new Date())}
+            </p>
+          </div>
+
+          {trackTableData ? (
+            <TrackTable
+              title={trackTableData.title}
+              subtitle={trackTableData.subtitle}
+              tracks={trackTableData.tracks}
+              backHref={buildHref({
+                collection: undefined,
+                collectionId: undefined,
+                collectionName: undefined
+              })}
+            />
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {tabs.map((tab) => (
+                  <Link
+                    key={tab.id}
+                    href={buildHref({ view: tab.id === "weekly" ? undefined : tab.id })}
+                    className={`rounded-full border px-4 py-2 text-sm transition ${
+                      view === tab.id
+                        ? "border-emerald-400 bg-emerald-400/15 text-foreground"
+                        : "border-white/10 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {tab.label}
+                  </Link>
+                ))}
+              </div>
+
+              {view !== "settings" ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {stats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-2xl border border-white/5 bg-black/30 p-4 shadow-inner shadow-black/40"
+                    >
+                      <p className="text-xs uppercase tracking-[0.35em] text-emerald-400">
+                        {stat.label}
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground">{stat.helper}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {view === "weekly" ? (
+                <RemovedList
+                  title="Removed This Week"
+                  events={weekly}
+                  emptyMessage={weeklyEmptyMessage}
+                />
+              ) : null}
+
+              {view === "archive" ? (
+                <RemovedList
+                  title="All Removed Songs"
+                  events={all}
+                  emptyMessage={archiveEmptyMessage}
+                />
+              ) : null}
+
+              {view === "settings" ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30">
+                    <h2 className="text-xl font-semibold">Notification preferences</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Decide how the weekly digest shows up. Emails summarize removals while in-app keeps an unread queue.
+                    </p>
+                    <NotificationPreferenceForm
+                      channel={user.notificationChannel}
+                      enabled={user.notificationsEnabled}
+                    />
+                  </div>
+                  <div className="space-y-4 rounded-3xl border border-red-500/40 bg-red-500/5 p-6 shadow-inner shadow-red-900/40">
+                    <h2 className="text-xl font-semibold text-red-200">Danger zone</h2>
+                    <p className="text-sm text-red-100/80">
+                      Export or delete your entire history. Actions are irreversible and comply with the PRD’s right-to-forget.
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between rounded-2xl border border-white/20 bg-black/20 px-4 py-2 text-sm text-muted-foreground">
+                        Export removal archive
+                        <span className="text-xs text-white/70">JSON / CSV</span>
+                      </div>
+                      <button className="w-full rounded-full border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20">
+                        Export archive
+                      </button>
+                      <button className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500/80">
+                        Delete my data
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
+
+        <aside className="space-y-6">
+          <LibraryPanel
+            likedSongsCount={library.likedSongsCount}
+            savedAlbumsCount={library.savedAlbumsCount}
+            playlists={library.playlists}
+            topArtists={library.topArtists}
+            savedAlbums={library.savedAlbums}
+            likedSongs={library.likedSongsPreview}
+            playlistPreview={playlistPreview}
+            activeCollection={{ type: collectionType, id: collectionId }}
+            page={playlistPage}
+          />
+          <section className="space-y-2 rounded-3xl border border-white/5 bg-black/30 p-5 text-sm text-muted-foreground shadow-inner shadow-black/40">
+            <p className="text-sm font-semibold text-foreground">Scan health & rate limits</p>
+            <p>
+              Spotify calls are paginated + throttled to respect API caps. Cron runners should space scans per user.
+            </p>
+            <p className="text-sm font-semibold text-foreground pt-3">One-click deletion</p>
+            <p>
+              Product requirements demand reversible, append-only history with a delete option. Ensure the danger-zone flow stays wired to Prisma.
+            </p>
+          </section>
+        </aside>
+      </div>
+    </main>
+  );
+};
+
+export default HomePage;
+
+const buildQuery = (
+  searchParams: PageProps["searchParams"],
+  overrides: Record<string, string | undefined>
+) => {
+  const params = new URLSearchParams();
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (!value || Array.isArray(value)) {
+        return;
+      }
+      params.set(key, value);
+    });
+  }
+  Object.entries(overrides).forEach(([key, value]) => {
+    if (!value) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+  });
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+};
+
+const runAutoScan = async (userId: string) => {
+  const repo = createSnapshotRepository();
+  const removalRepo = createRemovalEventRepository();
+  const client = getSpotifyClient();
+  await withAccessToken(userId, async (accessToken) =>
+    runDailyScan(
+      userId,
+      {
+        repo,
+        removalEvents: removalRepo,
+        spotify: {
+          fetchLikedTracks: () => client.fetchLikedTracks(accessToken, { maxPages: 2 }),
+          fetchPlaylistTracks: (id, name) =>
+            client.fetchPlaylistTracks(accessToken, id, name)
+        }
+      },
+      { type: "liked" }
+    )
+  );
+};

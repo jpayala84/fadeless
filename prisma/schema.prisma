@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+}
+
+enum SnapshotScope {
+  LIKED
+  PLAYLIST
+}
+
+model User {
+  id             String   @id
+  email          String?  @unique
+  displayName    String?
+  avatarUrl      String?
+  country        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tokens         Token?
+  sessions       Session[]
+  snapshots      Snapshot[]
+  removalEvents  RemovalEvent[]
+  notification   NotificationPreference?
+}
+
+model Token {
+  userId      String   @id
+  accessToken String
+  refreshToken String
+  scope       String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Snapshot {
+  id            String         @id @default(cuid())
+  userId        String
+  capturedAt    DateTime
+  scope         SnapshotScope  @default(LIKED)
+  playlistId    String?
+  tracks        SnapshotTrack[]
+  removalEvents RemovalEvent[] @relation("SnapshotRemovals")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scope, playlistId, capturedAt])
+}
+
+model SnapshotTrack {
+  id            String   @id @default(cuid())
+  snapshotId    String
+  trackId       String
+  trackName     String
+  artists       String
+  albumName     String
+  playlistIds   String[]
+  playlistNames String[]
+  likedSource   Boolean
+  createdAt     DateTime @default(now())
+  snapshot      Snapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([trackId])
+}
+
+model RemovalEvent {
+  id                   String   @id @default(cuid())
+  userId               String
+  trackId              String
+  trackName            String
+  artists              String
+  albumName            String
+  playlistIds          String[]
+  playlistNames        String[]
+  removedAt            DateTime
+  detectedSnapshotId   String?
+  replacementTrackId   String?
+  replacementTrackName String?
+  createdAt            DateTime @default(now())
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshot             Snapshot? @relation("SnapshotRemovals", fields: [detectedSnapshotId], references: [id])
+
+  @@index([userId, removedAt])
+}
+
+model NotificationPreference {
+  userId        String  @id
+  channel       NotificationChannel @default(EMAIL)
+  enabled       Boolean @default(true)
+  lastNotifiedAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
