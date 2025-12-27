@@ -10,10 +10,10 @@ type DeleteHistoryState =
   | { status: "success" }
   | { status: "error"; message: string };
 
-export const deleteHistoryAction = async (): Promise<DeleteHistoryState> => {
+export const deleteHistoryAction = async (_formData: FormData): Promise<void> => {
   const user = await getCurrentUser();
   if (!user) {
-    return { status: "error", message: "You must sign in first." };
+    return;
   }
 
   await prisma.$transaction([
@@ -26,5 +26,4 @@ export const deleteHistoryAction = async (): Promise<DeleteHistoryState> => {
   ]);
 
   revalidatePath("/", "page");
-  return { status: "success" };
 };

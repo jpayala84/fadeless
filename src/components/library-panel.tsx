@@ -6,9 +6,10 @@ import {
   useRouter,
   useSearchParams
 } from "next/navigation";
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
+import { togglePlaylistMonitoring } from "@/app/actions/playlist-monitoring";
 import { RunScanForm } from "@/components/run-scan-form";
 import type {
   AlbumSummary,
@@ -27,6 +28,7 @@ type Props = {
   savedAlbums: AlbumSummary[];
   likedSongs: SpotifyTrack[];
   playlistPreview?: PlaylistTrack[];
+  monitoredPlaylists?: Record<string, boolean>;
   activeCollection?: {
     type?: "playlist" | "liked" | "album";
     id?: string;
@@ -56,6 +58,7 @@ export const LibraryPanel = ({
   savedAlbums,
   likedSongs,
   playlistPreview = [],
+  monitoredPlaylists = {},
   activeCollection,
   page = 0
 }: Props) => {
@@ -78,6 +81,7 @@ export const LibraryPanel = ({
   const [playlistTracks, setPlaylistTracks] = useState<PlaylistTrackState[]>(
     () => playlistPreview.map((track) => ({ ...track, removed: false }))
   );
+  const [pendingMonitor, startMonitorTransition] = useTransition();
 
   useEffect(() => {
     setCurrentPage(clampPage(page, totalPages));
@@ -153,6 +157,34 @@ export const LibraryPanel = ({
     setCurrentPage(0);
     setActivePanel("playlists");
     viewCollection("playlist", { id: playlistId, name: playlistName });
+  };
+
+  const enabledMonitorCount = useMemo(
+    () => Object.values(monitoredPlaylists).filter(Boolean).length,
+    [monitoredPlaylists]
+  );
+
+  const toggleMonitor = (playlist: PlaylistSummary, nextEnabled: boolean) => {
+    startMonitorTransition(async () => {
+      try {
+        const result = await togglePlaylistMonitoring({
+          playlistId: playlist.id,
+          playlistName: playlist.name,
+          enabled: nextEnabled
+        });
+        if (result.status === "error") {
+          toast.error(result.message);
+          return;
+        }
+        toast.success(
+          result.enabled
+            ? `Tracking ${playlist.name}`
+            : `Stopped tracking ${playlist.name}`
+        );
+      } catch {
+        toast.error("Could not update playlist monitoring.");
+      }
+    });
   };
 
   const toggleLikedSong = (songId: string) => {
@@ -283,6 +315,7 @@ export const LibraryPanel = ({
               const isActive =
                 activeCollection?.type === "playlist" &&
                 activeCollection.id === playlist.id;
+              const isTracked = monitoredPlaylists[playlist.id] ?? false;
               return (
                 <li
                   key={playlist.id}
@@ -320,11 +353,30 @@ export const LibraryPanel = ({
                         <p className="text-xs text-muted-foreground">
                           {playlist.trackCount} tracks · {playlist.owner}
                         </p>
+                        <p className="text-[0.65rem] text-muted-foreground">
+                          {isTracked ? "Tracking enabled" : "Playlist not tracked"}
+                        </p>
                       </div>
                       <div
                         className="flex items-center gap-2"
                         onClick={(event) => event.stopPropagation()}
                       >
+                        <button
+                          type="button"
+                          onClick={() => toggleMonitor(playlist, !isTracked)}
+                          disabled={pendingMonitor || (!isTracked && enabledMonitorCount >= 5)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-[0.65rem] transition",
+                            isTracked
+                              ? "border-emerald-400/70 text-emerald-300 hover:bg-emerald-400/10"
+                              : "border-white/20 text-muted-foreground hover:text-foreground",
+                            pendingMonitor || (!isTracked && enabledMonitorCount >= 5)
+                              ? "opacity-40 cursor-not-allowed"
+                              : ""
+                          )}
+                        >
+                          {isTracked ? "On" : "Off"}
+                        </button>
                         <RunScanForm
                           playlistId={playlist.id}
                           playlistName={playlist.name}

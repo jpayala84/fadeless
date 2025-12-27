@@ -11,11 +11,15 @@ import { NotificationPreferenceForm } from "@/components/notification-preference
 import { LibraryPanel } from "@/components/library-panel";
 import { TrackTable } from "@/components/track-table";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LikedBaselineBanner } from "@/components/liked-baseline-banner";
+import { PlaylistMonitoringSettings } from "@/components/playlist-monitoring-settings";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   listRemovalEvents,
   listRemovalEventsForWeek
 } from "@/lib/db/removal-repository";
+import { getBaselineStatus } from "@/lib/db/baseline-repository";
+import { prisma } from "@/lib/db/client";
 import { attachRemovalArtwork } from "@/lib/removals/with-artwork";
 import { getLibraryOverview } from "@/lib/spotify/library";
 import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
@@ -82,6 +86,14 @@ const HomePage = async ({ searchParams }: PageProps) => {
     attachRemovalArtwork(user.id, weeklyRaw),
     attachRemovalArtwork(user.id, allRaw)
   ]);
+
+  const monitoredRows = await prisma.monitoredPlaylist.findMany({
+    where: { userId: user.id }
+  });
+  const monitoredPlaylists: Record<string, boolean> = {};
+  monitoredRows.forEach((row) => {
+    monitoredPlaylists[row.playlistId] = row.enabled;
+  });
 
   const client = getSpotifyClient();
   const mapToRows = (tracks: SpotifyTrack[]) =>
@@ -269,6 +281,15 @@ const HomePage = async ({ searchParams }: PageProps) => {
     { id: "archive", label: "All Removed Songs" }
   ];
 
+  const [likedBaseline, likedSnapshotCount] = await Promise.all([
+    getBaselineStatus(user.id, "LIKED", null),
+    prisma.snapshot.count({
+      where: { userId: user.id, scope: "LIKED" }
+    })
+  ]);
+  const showLikedBaseline =
+    view !== "settings" && !trackTableData && (likedBaseline ? !likedBaseline.completed : likedSnapshotCount === 0);
+
   return (
     <main className="min-h-screen bg-[#020202] text-foreground">
       <DashboardHeader user={user} view={view} />
@@ -305,6 +326,13 @@ const HomePage = async ({ searchParams }: PageProps) => {
             />
           ) : (
             <>
+              {showLikedBaseline ? (
+                <LikedBaselineBanner
+                  totalCount={library.likedSongsCount}
+                  initialIndexedCount={likedBaseline?.indexedCount ?? 0}
+                  initiallyCompleted={likedBaseline?.completed ?? false}
+                />
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 {tabs.map((tab) => (
                   <Link
@@ -370,6 +398,13 @@ const HomePage = async ({ searchParams }: PageProps) => {
                     <h2 className="text-xl font-semibold">Appearance</h2>
                     <ThemeToggle currentTheme={themeCookie} />
                   </div>
+                  <div className="surface-card space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30 md:col-span-2">
+                    <h2 className="text-xl font-semibold">Playlist monitoring</h2>
+                    <PlaylistMonitoringSettings
+                      playlists={library.playlists}
+                      monitored={monitoredPlaylists}
+                    />
+                  </div>
                   <div className="space-y-4 rounded-3xl border border-red-500/40 bg-red-500/5 p-6 shadow-inner shadow-red-900/40">
                     <h2 className="text-xl font-semibold text-red-200">Danger zone</h2>
                     <p className="text-sm text-red-100/80">
@@ -406,6 +441,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
               savedAlbums={library.savedAlbums}
               likedSongs={library.likedSongsPreview}
               playlistPreview={playlistPreview}
+              monitoredPlaylists={monitoredPlaylists}
               activeCollection={{ type: collectionType, id: collectionId }}
               page={playlistPage}
             />
