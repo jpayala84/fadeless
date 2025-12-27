@@ -13,6 +13,8 @@ import { TrackTable } from "@/components/track-table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LikedBaselineBanner } from "@/components/liked-baseline-banner";
 import { PlaylistMonitoringSettings } from "@/components/playlist-monitoring-settings";
+import { PlaylistOnboardingDialog } from "@/components/playlist-onboarding-dialog";
+import { AutoMonitorRunner } from "@/components/auto-monitor-runner";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   listRemovalEvents,
@@ -82,10 +84,52 @@ const HomePage = async ({ searchParams }: PageProps) => {
     }),
     getLibraryOverview(user.id)
   ]);
-  const [weekly, all] = await Promise.all([
+  const [weeklyDecorated, allDecorated] = await Promise.all([
     attachRemovalArtwork(user.id, weeklyRaw),
     attachRemovalArtwork(user.id, allRaw)
   ]);
+
+  const groupRemovalEvents = (
+    events: typeof weeklyDecorated
+  ): typeof weeklyDecorated => {
+    const map = new Map<string, (typeof weeklyDecorated)[number]>();
+    events.forEach((event) => {
+      const key = event.trackId
+        ? `${event.trackId}-${event.removedAt.toISOString().slice(0, 10)}`
+        : `${event.trackName}-${event.removedAt.toISOString()}`;
+      const playlistSources =
+        event.playlistNames.length > 0
+          ? event.playlistNames
+          : ["Liked Songs"];
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          ...event,
+          playlistNames: [...new Set(playlistSources)]
+        });
+        return;
+      }
+      const combined = new Set(existing.playlistNames);
+      playlistSources.forEach((name) => combined.add(name));
+      existing.playlistNames = Array.from(combined);
+      if (!existing.replacementTrackId && event.replacementTrackId) {
+        existing.replacementTrackId = event.replacementTrackId;
+        existing.replacementTrackName = event.replacementTrackName;
+      }
+      if (!existing.albumImageUrl && event.albumImageUrl) {
+        existing.albumImageUrl = event.albumImageUrl;
+      }
+      if (event.removedAt > existing.removedAt) {
+        existing.removedAt = event.removedAt;
+      }
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => b.removedAt.getTime() - a.removedAt.getTime()
+    );
+  };
+
+  const weekly = groupRemovalEvents(weeklyDecorated);
+  const all = groupRemovalEvents(allDecorated);
 
   const monitoredRows = await prisma.monitoredPlaylist.findMany({
     where: { userId: user.id }
@@ -94,6 +138,10 @@ const HomePage = async ({ searchParams }: PageProps) => {
   monitoredRows.forEach((row) => {
     monitoredPlaylists[row.playlistId] = row.enabled;
   });
+  const monitoredTargets = monitoredRows
+    .filter((row) => row.enabled)
+    .map((row) => ({ id: row.playlistId, name: row.playlistName }));
+  const needsOnboarding = monitoredTargets.length === 0;
 
   const client = getSpotifyClient();
   const mapToRows = (tracks: SpotifyTrack[]) =>
@@ -292,6 +340,13 @@ const HomePage = async ({ searchParams }: PageProps) => {
 
   return (
     <main className="min-h-screen bg-[#020202] text-foreground">
+      <PlaylistOnboardingDialog
+        playlists={library.playlists}
+        open={needsOnboarding}
+      />
+      {view !== "settings" ? (
+        <AutoMonitorRunner playlists={monitoredTargets} />
+      ) : null}
       <DashboardHeader user={user} view={view} />
       <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">
         <section className="space-y-6">

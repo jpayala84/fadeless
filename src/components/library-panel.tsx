@@ -66,14 +66,18 @@ export const LibraryPanel = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const sortedPlaylists = useMemo(() => {
+    const tracked = playlists.filter((playlist) => monitoredPlaylists[playlist.id]);
+    const untracked = playlists.filter((playlist) => !monitoredPlaylists[playlist.id]);
+    return [...tracked, ...untracked];
+  }, [playlists, monitoredPlaylists]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(playlists.length / PAGE_SIZE)),
-    [playlists.length]
+    () => Math.max(1, Math.ceil(sortedPlaylists.length / PAGE_SIZE)),
+    [sortedPlaylists.length]
   );
 
-  const [currentPage, setCurrentPage] = useState(
-    clampPage(page, totalPages)
-  );
+  const [currentPage, setCurrentPage] = useState(clampPage(page, totalPages));
   const [activePanel, setActivePanel] = useState<(typeof PANEL_TABS)[number]["id"]>("playlists");
   const [likedShelf, setLikedShelf] = useState<LikedSongState[]>(
     () => likedSongs.map((song) => ({ ...song, liked: true }))
@@ -142,8 +146,8 @@ export const LibraryPanel = ({
 
   const visiblePlaylists = useMemo(() => {
     const start = currentPage * PAGE_SIZE;
-    return playlists.slice(start, start + PAGE_SIZE);
-  }, [currentPage, playlists]);
+    return sortedPlaylists.slice(start, start + PAGE_SIZE);
+  }, [currentPage, sortedPlaylists]);
 
   const viewCollection = (
     type: "playlist" | "liked" | "album",
@@ -377,12 +381,14 @@ export const LibraryPanel = ({
                         >
                           {isTracked ? "On" : "Off"}
                         </button>
-                        <RunScanForm
-                          playlistId={playlist.id}
-                          playlistName={playlist.name}
-                          mode="playlist"
-                          showStatus={false}
-                        />
+                        {isTracked ? (
+                          <RunScanForm
+                            playlistId={playlist.id}
+                            playlistName={playlist.name}
+                            mode="playlist"
+                            showStatus={false}
+                          />
+                        ) : null}
                       </div>
                     </div>
                   </div>

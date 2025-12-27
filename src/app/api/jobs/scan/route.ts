@@ -1,17 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import { getCurrentUser } from '@/lib/auth/current-user';
-import { createRemovalEventRepository } from '@/lib/db/removal-repository';
-import { createSnapshotRepository } from '@/lib/db/snapshot-repository';
-import { runDailyScan } from '@/lib/jobs/daily-scan';
-import { getSpotifyClient, withAccessToken } from '@/lib/spotify/service';
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { createRemovalEventRepository } from "@/lib/db/removal-repository";
+import { createSnapshotRepository } from "@/lib/db/snapshot-repository";
+import { runDailyScan } from "@/lib/jobs/daily-scan";
+import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const payload = await request.json().catch(() => ({}));
+  const mode = payload?.mode === "playlist" ? "playlist" : "liked";
+  const playlistId =
+    typeof payload?.playlistId === "string" ? payload.playlistId : undefined;
+  const playlistName =
+    typeof payload?.playlistName === "string" ? payload.playlistName : undefined;
+
+  if (mode === "playlist" && !playlistId) {
+    return NextResponse.json({ error: "missing_playlist" }, { status: 400 });
   }
 
   const client = getSpotifyClient();
@@ -31,7 +42,9 @@ export async function POST() {
               client.fetchPlaylistTracks(accessToken, id, name)
           }
         },
-        { type: 'liked' }
+        mode === "playlist" && playlistId
+          ? { type: "playlist", playlistId, playlistName }
+          : { type: "liked" }
       )
     );
 
@@ -40,7 +53,7 @@ export async function POST() {
       potentialReplacements: diff.potentialReplacements.length
     });
   } catch (error) {
-    console.error('[Daily Scan]', error);
-    return NextResponse.json({ error: 'scan_failed' }, { status: 500 });
+    console.error("[Daily Scan]", error);
+    return NextResponse.json({ error: "scan_failed" }, { status: 500 });
   }
 }
