@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
-import { env } from '@/lib/env';
+import { getEnv } from '@/lib/env';
 import { createPkcePair, storePkceValues } from '@/lib/auth/pkce';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const env = getEnv();
   const { codeChallenge, codeVerifier, state } = createPkcePair();
   storePkceValues({ codeVerifier, state });
 

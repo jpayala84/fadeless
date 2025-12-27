@@ -1,4 +1,4 @@
-import { env } from '@/lib/env';
+import { getEnv } from '@/lib/env';
 import {
   loadEncryptedTokens,
   storeEncryptedTokens
@@ -6,9 +6,14 @@ import {
 import { decrypt, encrypt } from '@/lib/security/encryption';
 import { createSpotifyClient } from '@/lib/spotify/client';
 
-const client = createSpotifyClient(env);
+let spotifyClient: ReturnType<typeof createSpotifyClient> | null = null;
 
-export const getSpotifyClient = () => client;
+export const getSpotifyClient = () => {
+  if (!spotifyClient) {
+    spotifyClient = createSpotifyClient(getEnv());
+  }
+  return spotifyClient;
+};
 
 export const persistTokens = async ({
   userId,
@@ -36,6 +41,7 @@ export const withAccessToken = async <T>(
   userId: string,
   execute: (accessToken: string) => Promise<T>
 ) => {
+  const client = getSpotifyClient();
   const tokens = await loadEncryptedTokens(userId);
   if (!tokens) {
     throw new Error('Missing Spotify tokens');

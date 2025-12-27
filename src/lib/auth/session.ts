@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 
 import { cookies, headers } from 'next/headers';
 
-import { env } from '@/lib/env';
+import { getEnv } from '@/lib/env';
 import {
   createSession,
   deleteSession,
@@ -12,9 +12,11 @@ import {
 const SESSION_COOKIE = 'sgs_session';
 const SESSION_TTL_HOURS = 24;
 
+const getSessionSecret = () => getEnv().SESSION_SECRET;
+
 const sign = (value: string) => {
   return crypto
-    .createHmac('sha256', env.SESSION_SECRET)
+    .createHmac('sha256', getSessionSecret())
     .update(value)
     .digest('hex');
 };

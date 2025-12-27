@@ -61,7 +61,13 @@ const sanitizeEnv = (rawEnv: NodeJS.ProcessEnv) =>
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
-export const env = (() => {
+let cachedEnv: ServerEnv | null = null;
+
+export const getEnv = (): ServerEnv => {
+  if (cachedEnv) {
+    return cachedEnv;
+  }
+
   const parsed = serverSchema.safeParse(process.env);
   if (!parsed.success) {
     if (process.env.NODE_ENV !== 'production') {
@@ -69,10 +75,11 @@ export const env = (() => {
         '[env] Missing environment variables detected. Falling back to stub values for local UI development.'
       );
       const sanitized = sanitizeEnv(process.env);
-      return serverSchema.parse({
+      cachedEnv = serverSchema.parse({
         ...devFallbacks,
         ...sanitized
       });
+      return cachedEnv;
     }
 
     throw new Error(
@@ -80,5 +87,6 @@ export const env = (() => {
     );
   }
 
-  return parsed.data;
-})();
+  cachedEnv = parsed.data;
+  return cachedEnv;
+};

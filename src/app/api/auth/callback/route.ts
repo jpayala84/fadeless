@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { establishSession } from '@/lib/auth/session';
 import { readPkceValues } from '@/lib/auth/pkce';
-import { env } from '@/lib/env';
+import { getEnv } from '@/lib/env';
 import { upsertUserProfile } from '@/lib/db/user-repository';
 import {
   fetchSpotifyProfile,
@@ -13,21 +13,22 @@ import {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+  const env = getEnv();
   const { searchParams } = new URL(request.url);
   const error = searchParams.get('error');
   if (error) {
-    return redirectWithError(error);
+    return redirectWithError(env, error);
   }
 
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   if (!code || !state) {
-    return redirectWithError('invalid_request');
+    return redirectWithError(env, 'invalid_request');
   }
 
   const pkce = readPkceValues();
   if (!pkce || pkce.state !== state) {
-    return redirectWithError('state_mismatch');
+    return redirectWithError(env, 'state_mismatch');
   }
 
   try {
@@ -51,11 +52,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(env.NEXT_PUBLIC_APP_URL);
   } catch (err) {
     console.error('[Spotify Callback Error]', err);
-    return redirectWithError('auth_failed');
+    return redirectWithError(env, 'auth_failed');
   }
 }
 
-const redirectWithError = (code: string) =>
+const redirectWithError = (env: ReturnType<typeof getEnv>, code: string) =>
   NextResponse.redirect(
     `${env.NEXT_PUBLIC_APP_URL}?error=${encodeURIComponent(code)}`
   );
