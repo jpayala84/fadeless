@@ -42,7 +42,7 @@ const PANEL_TABS = [
   { id: "albums", label: "Albums" }
 ] as const;
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 5;
 
 type LikedSongState = SpotifyTrack & { liked: boolean };
 type PlaylistTrackState = PlaylistTrack & { removed: boolean };

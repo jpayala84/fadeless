@@ -4,17 +4,24 @@ import { useEffect } from "react";
 
 type Props = {
   playlists: Array<{ id: string; name: string }>;
+  runLikedScan?: boolean;
 };
 
-export const AutoMonitorRunner = ({ playlists }: Props) => {
+export const AutoMonitorRunner = ({ playlists, runLikedScan = true }: Props) => {
   useEffect(() => {
-    if (!playlists.length) {
-      return;
-    }
-
     let canceled = false;
 
     const run = async () => {
+      if (runLikedScan) {
+        try {
+          await fetch("/api/jobs/scan", {
+            method: "POST"
+          });
+        } catch {
+          // ignore
+        }
+      }
+
       for (const playlist of playlists) {
         if (canceled) {
           return;
@@ -32,7 +39,7 @@ export const AutoMonitorRunner = ({ playlists }: Props) => {
             })
           });
         } catch {
-          // ignore errors; manual scans remain available
+          // ignore
         }
       }
     };
@@ -41,8 +48,7 @@ export const AutoMonitorRunner = ({ playlists }: Props) => {
     return () => {
       canceled = true;
     };
-  }, [playlists]);
+  }, [playlists, runLikedScan]);
 
   return null;
 };
-

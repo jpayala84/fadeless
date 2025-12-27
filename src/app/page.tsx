@@ -345,7 +345,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
         open={needsOnboarding}
       />
       {view !== "settings" ? (
-        <AutoMonitorRunner playlists={monitoredTargets} />
+        <AutoMonitorRunner playlists={monitoredTargets} runLikedScan />
       ) : null}
       <DashboardHeader user={user} view={view} />
       <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">

@@ -43,25 +43,25 @@
 }
 
 .theme-light {
-  --background: 0 0% 97%;
-  --foreground: 222 47% 8%;
+  --background: 210 20% 96%;
+  --foreground: 215 25% 18%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 8%;
+  --card-foreground: 215 25% 18%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 8%;
-  --primary: 142 71% 45%;
+  --popover-foreground: 215 25% 18%;
+  --primary: 142 65% 45%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 222 47% 10%;
-  --muted: 0 0% 94%;
-  --muted-foreground: 222 10% 30%;
-  --accent: 142 71% 45%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 88%;
-  --input: 0 0% 88%;
-  --ring: 142 71% 45%;
+  --secondary: 0 0% 98%;
+  --secondary-foreground: 215 20% 30%;
+  --muted: 210 16% 92%;
+  --muted-foreground: 215 12% 40%;
+  --accent: 210 34% 90%;
+  --accent-foreground: 215 25% 18%;
+  --destructive: 2 85% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 210 16% 83%;
+  --input: 210 16% 83%;
+  --ring: 142 65% 45%;
 }
 
 * {
@@ -78,19 +78,22 @@ body {
 }
 
 .theme-light body {
-  background: radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.18), transparent 25%),
-    radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12), transparent 30%),
-    radial-gradient(circle at 60% 70%, rgba(16, 185, 129, 0.1), transparent 30%),
+  background: linear-gradient(
+      135deg,
+      rgba(20, 184, 166, 0.12),
+      rgba(34, 197, 94, 0.07)
+    ),
     hsl(var(--background));
 }
 
 .surface-card {
-  background-color: hsla(var(--card), 0.85);
-  border-color: hsla(var(--border), 1);
+  background-color: hsla(var(--card), 0.9);
+  border-color: hsla(var(--border), 0.4);
+  box-shadow: 0 25px 40px rgba(0, 0, 0, 0.25);
 }
 
 .theme-light .surface-card {
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
 }
 
 html {
