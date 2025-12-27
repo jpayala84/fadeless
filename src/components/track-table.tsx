@@ -57,36 +57,60 @@ export const TrackTable = ({ title, subtitle, tracks, backHref }: Props) => (
         <span className="text-right">Time</span>
       </div>
       <div className="divide-y divide-white/5">
-        {tracks.map((track, index) => (
-          <div
-            key={track.id ?? `${track.name}-${index}`}
-            className="grid grid-cols-[40px_minmax(0,1fr)_80px] items-center gap-3 bg-black/30 px-4 py-3 text-sm text-foreground transition hover:bg-black/50"
-          >
-            <span className="text-xs text-muted-foreground">{index + 1}</span>
-            <div className="flex items-center gap-3">
-              {track.imageUrl ? (
-                <Image
-                  src={track.imageUrl}
-                  alt={track.name}
-                  width={44}
-                  height={44}
-                  className="h-11 w-11 rounded-md object-cover"
-                />
-              ) : (
-                <div className="h-11 w-11 rounded-md bg-gradient-to-b from-emerald-400/20 to-transparent" />
-              )}
-              <div>
-                <p className="font-medium">{track.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {track.artists.join(", ")}
-                </p>
+        {tracks.map((track, index) => {
+          const body = (
+            <>
+              <span className="text-xs text-muted-foreground">
+                {index + 1}
+              </span>
+              <div className="flex items-center gap-3">
+                {track.imageUrl ? (
+                  <Image
+                    src={track.imageUrl}
+                    alt={track.name}
+                    width={44}
+                    height={44}
+                    className="h-11 w-11 rounded-md object-cover"
+                  />
+                ) : (
+                  <div className="h-11 w-11 rounded-md bg-gradient-to-b from-emerald-400/20 to-transparent" />
+                )}
+                <div>
+                  <p className="font-medium">{track.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {track.artists.join(", ")}
+                  </p>
+                </div>
               </div>
+              <span className="text-right text-xs text-muted-foreground">
+                {formatDuration(track.durationMs)}
+              </span>
+            </>
+          );
+
+          if (track.externalUrl) {
+            return (
+              <a
+                key={track.id ?? `${track.name}-${index}`}
+                href={track.externalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="grid grid-cols-[40px_minmax(0,1fr)_80px] items-center gap-3 bg-black/30 px-4 py-3 text-sm text-foreground transition hover:bg-black/50"
+              >
+                {body}
+              </a>
+            );
+          }
+
+          return (
+            <div
+              key={track.id ?? `${track.name}-${index}`}
+              className="grid grid-cols-[40px_minmax(0,1fr)_80px] items-center gap-3 bg-black/30 px-4 py-3 text-sm text-foreground transition hover:bg-black/50"
+            >
+              {body}
             </div>
-            <span className="text-right text-xs text-muted-foreground">
-              {formatDuration(track.durationMs)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
         {tracks.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
             No tracks to display yet.

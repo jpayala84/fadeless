@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 import { deleteHistoryAction } from "@/app/actions/delete-history";
 import { LandingHero } from "@/components/landing-hero";
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -82,7 +84,10 @@ const HomePage = async ({ searchParams }: PageProps) => {
       name: track.name,
       artists: track.artists,
       imageUrl: track.imageUrl,
-      durationMs: track.durationMs
+      durationMs: track.durationMs,
+      externalUrl: track.id
+        ? `https://open.spotify.com/track/${track.id}`
+        : undefined
     }));
 
   let playlistPreview: PlaylistTrack[] = [];
@@ -111,7 +116,9 @@ const HomePage = async ({ searchParams }: PageProps) => {
   if (collectionType === "playlist" && collectionId) {
     const playlistTracks = await withAccessToken(user.id, (accessToken) =>
       client
-        .fetchPlaylistTracks(accessToken, collectionId, collectionName)
+        .fetchPlaylistTracks(accessToken, collectionId, collectionName, {
+          maxPages: 3
+        })
         .catch(() => [])
     );
     const playlistMeta =

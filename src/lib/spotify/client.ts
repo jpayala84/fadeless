@@ -65,7 +65,8 @@ export type SpotifyClient = {
   fetchPlaylistTracks: (
     accessToken: string,
     playlistId: string,
-    playlistName?: string
+    playlistName?: string,
+    options?: { maxPages?: number }
   ) => Promise<PlaylistTrack[]>;
   fetchLikedTracksTotal: (accessToken: string) => Promise<number>;
   fetchSavedAlbumsTotal: (accessToken: string) => Promise<number>;
@@ -444,7 +445,8 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
   const fetchPlaylistTracks = async (
     accessToken: string,
     playlistId: string,
-    playlistName?: string
+    playlistName?: string,
+    options?: { maxPages?: number }
   ): Promise<PlaylistTrack[]> => {
     let resolvedName = playlistName;
     if (!resolvedName) {
@@ -463,6 +465,7 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
     return paginate<PlaylistTrack>({
       accessToken,
       initialUrl: `${API_BASE}/playlists/${playlistId}/tracks?limit=100`,
+      maxPages: options?.maxPages,
       mapItem: (item: any) => {
         const track = item.track;
         if (!track) {

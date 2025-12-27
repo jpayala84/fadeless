@@ -49,21 +49,44 @@ export const RemovedList = ({ title, events, emptyMessage }: Props) => (
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary/30 to-primary/5" />
               )}
               <div className="flex flex-1 items-center justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold text-foreground">
-                    {event.trackName}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {event.artists.join(", ")} ·{" "}
-                    <span className="text-emerald-300">{event.albumName}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Removed from{" "}
-                    <span className="text-foreground">
-                      {event.playlistNames.join(", ") || "Liked Songs"}
-                    </span>
-                  </p>
-                </div>
+                {event.trackId ? (
+                  <a
+                    href={`https://open.spotify.com/track/${event.trackId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block"
+                  >
+                    <p className="text-base font-semibold text-foreground underline-offset-4 hover:underline">
+                      {event.trackName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {event.artists.join(", ")} ·{" "}
+                      <span className="text-emerald-300">{event.albumName}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Removed from{" "}
+                      <span className="text-foreground">
+                        {event.playlistNames.join(", ") || "Liked Songs"}
+                      </span>
+                    </p>
+                  </a>
+                ) : (
+                  <div>
+                    <p className="text-base font-semibold text-foreground">
+                      {event.trackName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {event.artists.join(", ")} ·{" "}
+                      <span className="text-emerald-300">{event.albumName}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Removed from{" "}
+                      <span className="text-foreground">
+                        {event.playlistNames.join(", ") || "Liked Songs"}
+                      </span>
+                    </p>
+                  </div>
+                )}
                 <span className="text-xs text-muted-foreground">
                   {formatDate(event.removedAt)}
                 </span>

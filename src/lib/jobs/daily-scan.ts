@@ -50,7 +50,8 @@ export type ScanDependencies = {
     fetchLikedTracks: () => Promise<SpotifyTrack[]>;
     fetchPlaylistTracks: (
       playlistId: string,
-      playlistName?: string
+      playlistName?: string,
+      options?: { maxPages?: number }
     ) => Promise<PlaylistTrack[]>;
   };
 };

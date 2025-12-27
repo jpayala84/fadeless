@@ -7,7 +7,7 @@ import {
   useRouter,
   useSearchParams
 } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
 import { RunScanForm } from "@/components/run-scan-form";
@@ -37,8 +37,8 @@ type Props = {
 
 const PANEL_TABS = [
   { id: "playlists", label: "Playlists" },
-  { id: "albums", label: "Saved albums" },
-  { id: "artists", label: "Artists" }
+  { id: "artists", label: "Artists" },
+  { id: "albums", label: "Albums" }
 ] as const;
 
 const PAGE_SIZE = 4;
@@ -187,13 +187,25 @@ export const LibraryPanel = ({
     }
   };
 
+  const handleKeyActivate = (
+    event: KeyboardEvent<HTMLElement>,
+    callback: () => void
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      callback();
+    }
+  };
+
   return (
     <section className="space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#151515] to-[#0c0c0c] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => viewCollection("liked")}
+        onKeyDown={(event) => handleKeyActivate(event, () => viewCollection("liked"))}
         className={cn(
-          "w-full rounded-3xl border border-white/10 bg-black/30 p-5 text-left shadow-inner shadow-black/30 transition",
+          "w-full rounded-3xl border border-white/10 bg-black/30 p-5 text-left shadow-inner shadow-black/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
           activeCollection?.type === "liked"
             ? "border-emerald-400/60 bg-emerald-400/10"
             : ""
@@ -225,7 +237,7 @@ export const LibraryPanel = ({
         <p className="mt-3 text-xs text-muted-foreground">
           Snapshot scans always include your liked songs. We’ll sync edits once Spotify grants write scopes.
         </p>
-      </button>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         {PANEL_TABS.map((tab) => (
@@ -303,9 +315,15 @@ export const LibraryPanel = ({
                     )}
                     <div className="flex flex-1 items-center justify-between gap-3">
                       <div>
-                        <p className="font-medium text-foreground">
+                        <a
+                          href={`https://open.spotify.com/playlist/${playlist.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="font-medium text-foreground underline-offset-4 hover:underline"
+                        >
                           {playlist.name}
-                        </p>
+                        </a>
                         <p className="text-xs text-muted-foreground">
                           {playlist.trackCount} tracks · {playlist.owner}
                         </p>
@@ -330,6 +348,14 @@ export const LibraryPanel = ({
                         >
                           Open
                         </Link>
+                        <a
+                          href={`https://open.spotify.com/playlist/${playlist.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-white/20 px-3 py-1 text-xs text-muted-foreground transition hover:border-emerald-400 hover:text-foreground"
+                        >
+                          Spotify
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -364,14 +390,30 @@ export const LibraryPanel = ({
                     ) : (
                       <div className="h-10 w-10 rounded-lg bg-gradient-to-b from-emerald-400/20 to-transparent" />
                     )}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {track.name}
-                      </p>
-                      <p className="text-[0.65rem] text-muted-foreground">
-                        {track.artists.join(", ")}
-                      </p>
-                    </div>
+                    {track.id ? (
+                      <a
+                        href={`https://open.spotify.com/track/${track.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1"
+                      >
+                        <p className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
+                          {track.name}
+                        </p>
+                        <p className="text-[0.65rem] text-muted-foreground">
+                          {track.artists.join(", ")}
+                        </p>
+                      </a>
+                    ) : (
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {track.name}
+                        </p>
+                        <p className="text-[0.65rem] text-muted-foreground">
+                          {track.artists.join(", ")}
+                        </p>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => togglePlaylistTrack(track.id)}
@@ -398,7 +440,7 @@ export const LibraryPanel = ({
       {activePanel === "albums" ? (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            {savedAlbumsCount.toLocaleString()} saved albums
+            {savedAlbumsCount.toLocaleString()} albums
           </p>
           <div className="grid grid-cols-2 gap-3">
             {savedAlbums.map((album) => {
@@ -433,16 +475,25 @@ export const LibraryPanel = ({
                   <div>
                     <p className="font-medium">{album.name}</p>
                     <p className="text-xs text-muted-foreground">{album.artist}</p>
-                    <span className="text-[0.65rem] text-emerald-400">
-                      View tracks
-                    </span>
+                    <div className="mt-1 flex gap-2 text-[0.65rem]">
+                      <span className="text-emerald-400">View tracks</span>
+                      <a
+                        href={`https://open.spotify.com/album/${album.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-muted-foreground underline-offset-4 hover:underline"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        Spotify
+                      </a>
+                    </div>
                   </div>
                 </button>
               );
             })}
             {savedAlbums.length === 0 ? (
               <p className="col-span-2 text-xs text-muted-foreground">
-                Saved albums will populate after your next sync.
+                Albums populate after your next sync.
               </p>
             ) : null}
           </div>
