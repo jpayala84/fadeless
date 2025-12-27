@@ -1,13 +1,7 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 
 import './globals.css';
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap'
-});
 
 export const metadata: Metadata = {
   title: 'Spotify Gone Songs',
@@ -21,7 +15,7 @@ type RootLayoutProps = Readonly<{
 
 const RootLayout = ({ children }: RootLayoutProps) => (
   <html lang="en" suppressHydrationWarning>
-    <body className={inter.className}>
+    <body>
       {children}
       <Toaster position="bottom-right" richColors />
     </body>
