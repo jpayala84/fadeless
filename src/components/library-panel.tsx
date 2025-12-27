@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import {
   usePathname,
   useRouter,
@@ -132,6 +131,7 @@ export const LibraryPanel = ({
     }
     params.delete("playlist");
     params.delete("playlistPage");
+    params.delete("collectionPage");
     const query = params.toString();
     return query ? `${pathname}?${query}` : pathname;
   };
@@ -198,7 +198,7 @@ export const LibraryPanel = ({
   };
 
   return (
-    <section className="space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#151515] to-[#0c0c0c] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur">
+    <section className="surface-card space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#151515] to-[#0c0c0c] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur">
       <div
         role="button"
         tabIndex={0}
@@ -225,13 +225,6 @@ export const LibraryPanel = ({
           </div>
           <div onClick={(event) => event.stopPropagation()}>
             <RunScanForm mode="liked" showStatus={false} />
-            <Link
-              href={buildCollectionHref("liked")}
-              scroll={false}
-              className="mt-2 block rounded-full border border-white/20 px-3 py-1 text-center text-xs text-muted-foreground transition hover:border-emerald-400 hover:text-foreground"
-            >
-              Open
-            </Link>
           </div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
@@ -338,24 +331,6 @@ export const LibraryPanel = ({
                           mode="playlist"
                           showStatus={false}
                         />
-                        <Link
-                          href={buildCollectionHref("playlist", {
-                            id: playlist.id,
-                            name: playlist.name
-                          })}
-                          scroll={false}
-                          className="rounded-full border border-white/20 px-3 py-1 text-xs text-muted-foreground transition hover:border-emerald-400 hover:text-foreground"
-                        >
-                          Open
-                        </Link>
-                        <a
-                          href={`https://open.spotify.com/playlist/${playlist.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-full border border-white/20 px-3 py-1 text-xs text-muted-foreground transition hover:border-emerald-400 hover:text-foreground"
-                        >
-                          Spotify
-                        </a>
                       </div>
                     </div>
                   </div>

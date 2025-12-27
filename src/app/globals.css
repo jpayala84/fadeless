@@ -34,9 +34,34 @@
   --radius: 0.75rem;
 }
 
-.dark {
+.theme-dark {
   --background: 222 47% 4%;
   --foreground: 210 40% 98%;
+  --card: 222 47% 6%;
+  --card-foreground: 210 40% 98%;
+  --muted-foreground: 215 20% 65%;
+}
+
+.theme-light {
+  --background: 0 0% 97%;
+  --foreground: 222 47% 8%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 8%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 8%;
+  --primary: 142 71% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 222 47% 10%;
+  --muted: 0 0% 94%;
+  --muted-foreground: 222 10% 30%;
+  --accent: 142 71% 45%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 88%;
+  --input: 0 0% 88%;
+  --ring: 142 71% 45%;
 }
 
 * {
@@ -50,6 +75,22 @@ body {
     radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.12), transparent 30%),
     radial-gradient(circle at 60% 70%, rgba(16, 185, 129, 0.12), transparent 30%),
     hsl(var(--background));
+}
+
+.theme-light body {
+  background: radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.18), transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12), transparent 30%),
+    radial-gradient(circle at 60% 70%, rgba(16, 185, 129, 0.1), transparent 30%),
+    hsl(var(--background));
+}
+
+.surface-card {
+  background-color: hsla(var(--card), 0.85);
+  border-color: hsla(var(--border), 1);
+}
+
+.theme-light .surface-card {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
 }
 
 html {

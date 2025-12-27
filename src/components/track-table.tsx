@@ -16,6 +16,13 @@ type Props = {
   subtitle?: string;
   tracks: TrackRow[];
   backHref?: string;
+  externalHref?: string;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    prevHref?: string;
+    nextHref?: string;
+  };
 };
 
 const formatDuration = (duration?: number) => {
@@ -28,14 +35,32 @@ const formatDuration = (duration?: number) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-export const TrackTable = ({ title, subtitle, tracks, backHref }: Props) => (
-  <section className="space-y-4 rounded-3xl border border-white/5 bg-gradient-to-b from-[#101010] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
+export const TrackTable = ({
+  title,
+  subtitle,
+  tracks,
+  backHref,
+  externalHref,
+  pagination
+}: Props) => (
+  <section className="surface-card space-y-4 rounded-3xl border border-white/5 bg-gradient-to-b from-[#101010] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <p className="text-xs uppercase tracking-[0.35em] text-emerald-300">
           Collection
         </p>
-        <h2 className="text-3xl font-semibold">{title}</h2>
+        {externalHref ? (
+          <a
+            href={externalHref}
+            target="_blank"
+            rel="noreferrer"
+            className="text-3xl font-semibold underline-offset-4 hover:underline"
+          >
+            {title}
+          </a>
+        ) : (
+          <h2 className="text-3xl font-semibold">{title}</h2>
+        )}
         {subtitle ? (
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         ) : null}
@@ -118,5 +143,29 @@ export const TrackTable = ({ title, subtitle, tracks, backHref }: Props) => (
         ) : null}
       </div>
     </div>
+
+    {pagination ? (
+      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+        <a
+          href={pagination.prevHref ?? "#"}
+          className={`rounded-full border border-white/20 px-3 py-1 ${
+            pagination.prevHref ? "hover:text-foreground" : "opacity-30 pointer-events-none"
+          }`}
+        >
+          Previous
+        </a>
+        <span>
+          Page {pagination.currentPage + 1} of {pagination.totalPages}
+        </span>
+        <a
+          href={pagination.nextHref ?? "#"}
+          className={`rounded-full border border-white/20 px-3 py-1 ${
+            pagination.nextHref ? "hover:text-foreground" : "opacity-30 pointer-events-none"
+          }`}
+        >
+          Next
+        </a>
+      </div>
+    ) : null}
   </section>
 );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ import { RemovedList } from "@/components/removed-list";
 import { NotificationPreferenceForm } from "@/components/notification-preference-form";
 import { LibraryPanel } from "@/components/library-panel";
 import { TrackTable } from "@/components/track-table";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   listRemovalEvents,
@@ -32,11 +34,13 @@ type PageProps = {
     collection?: string;
     collectionId?: string;
     collectionName?: string;
+    collectionPage?: string;
   };
 };
 
 const HomePage = async ({ searchParams }: PageProps) => {
   const user = await getCurrentUser();
+  const themeCookie = cookies().get("theme")?.value === "light" ? "light" : "dark";
 
   if (!user) {
     return (
@@ -60,6 +64,8 @@ const HomePage = async ({ searchParams }: PageProps) => {
       : undefined;
   const collectionId = searchParams?.collectionId;
   const collectionName = searchParams?.collectionName;
+  const collectionPageParam =
+    Number(searchParams?.collectionPage ?? "0") || 0;
 
   const [weeklyRaw, allRaw, library] = await Promise.all([
     listRemovalEventsForWeek({
@@ -90,6 +96,54 @@ const HomePage = async ({ searchParams }: PageProps) => {
         : undefined
     }));
 
+  const buildHref = (overrides: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    if (searchParams) {
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (!value || Array.isArray(value)) {
+          return;
+        }
+        params.set(key, value);
+      });
+    }
+    Object.entries(overrides).forEach(([key, value]) => {
+      if (!value) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    const query = params.toString();
+    return query ? `/?${query}` : "/";
+  };
+
+  const paginateTrackList = (tracks: SpotifyTrack[]) => {
+    const pageSize = 50;
+    const totalPages = Math.max(1, Math.ceil(tracks.length / pageSize));
+    const currentPage = Math.min(
+      Math.max(collectionPageParam, 0),
+      totalPages - 1
+    );
+    const start = currentPage * pageSize;
+    const slice = tracks.slice(start, start + pageSize);
+    const pagination =
+      totalPages > 1
+        ? {
+            currentPage,
+            totalPages,
+            prevHref:
+              currentPage > 0
+                ? buildHref({ collectionPage: String(currentPage - 1) })
+                : undefined,
+            nextHref:
+              currentPage < totalPages - 1
+                ? buildHref({ collectionPage: String(currentPage + 1) })
+                : undefined
+          }
+        : undefined;
+    return { slice, pagination };
+  };
+
   let playlistPreview: PlaylistTrack[] = [];
   if (collectionType === "playlist" && collectionId) {
     playlistPreview = await withAccessToken(user.id, (accessToken) =>
@@ -99,19 +153,27 @@ const HomePage = async ({ searchParams }: PageProps) => {
     );
   }
 
-  let trackTableData:
-    | {
-        title: string;
-        subtitle?: string;
-        tracks: Array<{
-          id: string;
-          name: string;
-          artists: string[];
-          imageUrl?: string;
-          durationMs?: number;
-        }>;
-      }
-    | null = null;
+  type TrackTableData = {
+    title: string;
+    subtitle?: string;
+    externalHref?: string;
+    tracks: Array<{
+      id: string;
+      name: string;
+      artists: string[];
+      imageUrl?: string;
+      durationMs?: number;
+      externalUrl?: string;
+    }>;
+    pagination?: {
+      currentPage: number;
+      totalPages: number;
+      prevHref?: string;
+      nextHref?: string;
+    };
+  };
+
+  let trackTableData: TrackTableData | null = null;
 
   if (collectionType === "playlist" && collectionId) {
     const playlistTracks = await withAccessToken(user.id, (accessToken) =>
@@ -123,29 +185,42 @@ const HomePage = async ({ searchParams }: PageProps) => {
     );
     const playlistMeta =
       library.playlists.find((playlist) => playlist.id === collectionId) ?? null;
+    const { slice, pagination } = paginateTrackList(playlistTracks);
     trackTableData = {
       title: collectionName ?? playlistMeta?.name ?? "Playlist",
       subtitle: `${playlistTracks.length} tracks`,
-      tracks: mapToRows(playlistTracks)
+      externalHref: `https://open.spotify.com/playlist/${collectionId}`,
+      tracks: mapToRows(slice),
+      pagination
     };
   } else if (collectionType === "liked") {
     const likedTracks = await withAccessToken(user.id, (accessToken) =>
       client.fetchLikedTracks(accessToken, { maxPages: 4 }).catch(() => [])
     );
+    const { slice, pagination } = paginateTrackList(likedTracks);
     trackTableData = {
       title: "Liked Songs",
       subtitle: `${likedTracks.length} tracks`,
-      tracks: mapToRows(likedTracks)
+      externalHref: "https://open.spotify.com/collection/tracks",
+      tracks: mapToRows(slice),
+      pagination
     };
   } else if (collectionType === "album" && collectionId) {
     const albumTracks = await withAccessToken(user.id, (accessToken) =>
       client.fetchAlbumTracks(accessToken, collectionId).catch(() => [])
     );
+    const { slice, pagination } = paginateTrackList(albumTracks);
     trackTableData = {
       title: collectionName ?? "Album",
       subtitle: `${albumTracks.length} tracks`,
-      tracks: mapToRows(albumTracks)
+      externalHref: `https://open.spotify.com/album/${collectionId}`,
+      tracks: mapToRows(slice),
+      pagination
     };
+  }
+
+  if (view === "settings") {
+    trackTableData = null;
   }
 
   const now = new Date();
@@ -160,9 +235,6 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const replacementCount = all.filter(
     (event) => Boolean(event.replacementTrackId)
   ).length;
-
-  const buildHref = (overrides: Record<string, string | undefined>) =>
-    buildQuery(searchParams, overrides);
 
   const hasHistory = all.length > 0;
   const weeklyEmptyMessage = hasHistory
@@ -202,7 +274,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
       <DashboardHeader user={user} view={view} />
       <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">
         <section className="space-y-6">
-          <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-gradient-to-r from-[#0d0d0d] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="surface-card flex flex-col gap-4 rounded-3xl border border-white/5 bg-gradient-to-r from-[#0d0d0d] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
                 Library health
@@ -222,10 +294,13 @@ const HomePage = async ({ searchParams }: PageProps) => {
               title={trackTableData.title}
               subtitle={trackTableData.subtitle}
               tracks={trackTableData.tracks}
+              externalHref={trackTableData.externalHref}
+              pagination={trackTableData.pagination}
               backHref={buildHref({
                 collection: undefined,
                 collectionId: undefined,
-                collectionName: undefined
+                collectionName: undefined,
+                collectionPage: undefined
               })}
             />
           ) : (
@@ -251,7 +326,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
                   {stats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="rounded-2xl border border-white/5 bg-black/30 p-4 shadow-inner shadow-black/40"
+                      className="surface-card rounded-2xl border border-white/5 bg-black/30 p-4 shadow-inner shadow-black/40"
                     >
                       <p className="text-xs uppercase tracking-[0.35em] text-emerald-400">
                         {stat.label}
@@ -281,7 +356,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
 
               {view === "settings" ? (
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30">
+                  <div className="surface-card space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30">
                     <h2 className="text-xl font-semibold">Notification preferences</h2>
                     <p className="text-sm text-muted-foreground">
                       Decide how the weekly digest shows up. Emails summarize removals while in-app keeps an unread queue.
@@ -290,6 +365,10 @@ const HomePage = async ({ searchParams }: PageProps) => {
                       channel={user.notificationChannel}
                       enabled={user.notificationsEnabled}
                     />
+                  </div>
+                  <div className="surface-card space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30">
+                    <h2 className="text-xl font-semibold">Appearance</h2>
+                    <ThemeToggle currentTheme={themeCookie} />
                   </div>
                   <div className="space-y-4 rounded-3xl border border-red-500/40 bg-red-500/5 p-6 shadow-inner shadow-red-900/40">
                     <h2 className="text-xl font-semibold text-red-200">Danger zone</h2>
@@ -317,56 +396,34 @@ const HomePage = async ({ searchParams }: PageProps) => {
           )}
         </section>
 
-        <aside className="space-y-6">
-          <LibraryPanel
-            likedSongsCount={library.likedSongsCount}
-            savedAlbumsCount={library.savedAlbumsCount}
-            playlists={library.playlists}
-            topArtists={library.topArtists}
-            savedAlbums={library.savedAlbums}
-            likedSongs={library.likedSongsPreview}
-            playlistPreview={playlistPreview}
-            activeCollection={{ type: collectionType, id: collectionId }}
-            page={playlistPage}
-          />
-          <section className="space-y-2 rounded-3xl border border-white/5 bg-black/30 p-5 text-sm text-muted-foreground shadow-inner shadow-black/40">
-            <p className="text-sm font-semibold text-foreground">Scan health & rate limits</p>
-            <p>
-              Spotify calls are paginated + throttled to respect API caps. Cron runners should space scans per user.
-            </p>
-            <p className="text-sm font-semibold text-foreground pt-3">One-click deletion</p>
-            <p>
-              Product requirements demand reversible, append-only history with a delete option. Ensure the danger-zone flow stays wired to Prisma.
-            </p>
-          </section>
-        </aside>
+        {view !== "settings" ? (
+          <aside className="space-y-6">
+            <LibraryPanel
+              likedSongsCount={library.likedSongsCount}
+              savedAlbumsCount={library.savedAlbumsCount}
+              playlists={library.playlists}
+              topArtists={library.topArtists}
+              savedAlbums={library.savedAlbums}
+              likedSongs={library.likedSongsPreview}
+              playlistPreview={playlistPreview}
+              activeCollection={{ type: collectionType, id: collectionId }}
+              page={playlistPage}
+            />
+            <section className="surface-card space-y-2 rounded-3xl border border-white/5 bg-black/30 p-5 text-sm text-muted-foreground shadow-inner shadow-black/40">
+              <p className="text-sm font-semibold text-foreground">Scan health & rate limits</p>
+              <p>
+                Spotify calls are paginated + throttled to respect API caps. Cron runners should space scans per user.
+              </p>
+              <p className="text-sm font-semibold text-foreground pt-3">One-click deletion</p>
+              <p>
+                Product requirements demand reversible, append-only history with a delete option. Ensure the danger-zone flow stays wired to Prisma.
+              </p>
+            </section>
+          </aside>
+        ) : null}
       </div>
     </main>
   );
 };
 
 export default HomePage;
-
-const buildQuery = (
-  searchParams: PageProps["searchParams"],
-  overrides: Record<string, string | undefined>
-) => {
-  const params = new URLSearchParams();
-  if (searchParams) {
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (!value || Array.isArray(value)) {
-        return;
-      }
-      params.set(key, value);
-    });
-  }
-  Object.entries(overrides).forEach(([key, value]) => {
-    if (!value) {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-  });
-  const query = params.toString();
-  return query ? `/?${query}` : "/";
-};

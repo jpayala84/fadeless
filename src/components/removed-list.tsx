@@ -17,7 +17,7 @@ const formatDate = (value: Date) =>
   }).format(value);
 
 export const RemovedList = ({ title, events, emptyMessage }: Props) => (
-  <section className="space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#111]/80 to-[#0a0a0a]/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+  <section className="surface-card space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#111]/80 to-[#0a0a0a]/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
     <div className="flex items-center justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.35em] text-emerald-400/80">
