@@ -8,13 +8,10 @@ import { LibraryPanel } from "@/components/library-panel";
 import { TrackTable } from "@/components/track-table";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
-  createRemovalEventRepository,
   listRemovalEvents,
   listRemovalEventsForWeek
 } from "@/lib/db/removal-repository";
-import { createSnapshotRepository } from "@/lib/db/snapshot-repository";
 import { attachRemovalArtwork } from "@/lib/removals/with-artwork";
-import { runDailyScan } from "@/lib/jobs/daily-scan";
 import { getLibraryOverview } from "@/lib/spotify/library";
 import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
 import type { PlaylistTrack, SpotifyTrack } from "@/lib/spotify/client";
@@ -50,20 +47,6 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const viewParam = searchParams?.view;
   const view: DashboardView =
     viewParam === "archive" || viewParam === "settings" ? viewParam : "weekly";
-
-  const snapshotRepo = createSnapshotRepository();
-  const existingSnapshot = await snapshotRepo.latestSnapshot(user.id, {
-    type: "liked"
-  });
-  const needsBootstrap = existingSnapshot.length === 0;
-
-  if (needsBootstrap) {
-    try {
-      await runAutoScan(user.id);
-    } catch (error) {
-      console.error("[AutoScan]", error);
-    }
-  }
 
   const collectionParam = searchParams?.collection;
   const collectionType: "playlist" | "liked" | "album" | undefined =
@@ -380,25 +363,4 @@ const buildQuery = (
   });
   const query = params.toString();
   return query ? `/?${query}` : "/";
-};
-
-const runAutoScan = async (userId: string) => {
-  const repo = createSnapshotRepository();
-  const removalRepo = createRemovalEventRepository();
-  const client = getSpotifyClient();
-  await withAccessToken(userId, async (accessToken) =>
-    runDailyScan(
-      userId,
-      {
-        repo,
-        removalEvents: removalRepo,
-        spotify: {
-          fetchLikedTracks: () => client.fetchLikedTracks(accessToken, { maxPages: 2 }),
-          fetchPlaylistTracks: (id, name) =>
-            client.fetchPlaylistTracks(accessToken, id, name)
-        }
-      },
-      { type: "liked" }
-    )
-  );
 };
