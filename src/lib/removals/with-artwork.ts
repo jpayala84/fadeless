@@ -10,13 +10,18 @@ export const attachRemovalArtwork = async (
   }
 
   const client = getSpotifyClient();
-  return withAccessToken(userId, async (accessToken) => {
-    const trackIds = events.map((event) => event.trackId).filter(Boolean);
-    const details = await client.fetchTrackDetails(accessToken, trackIds);
-    const artMap = new Map(details.map((detail) => [detail.id, detail.imageUrl]));
-    return events.map((event) => ({
-      ...event,
-      albumImageUrl: artMap.get(event.trackId)
-    }));
-  });
+  try {
+    return await withAccessToken(userId, async (accessToken) => {
+      const trackIds = events.map((event) => event.trackId).filter(Boolean);
+      const details = await client.fetchTrackDetails(accessToken, trackIds);
+      const artMap = new Map(details.map((detail) => [detail.id, detail.imageUrl]));
+      return events.map((event) => ({
+        ...event,
+        albumImageUrl: artMap.get(event.trackId)
+      }));
+    });
+  } catch (error) {
+    console.error("[attachRemovalArtwork]", error);
+    return events;
+  }
 };

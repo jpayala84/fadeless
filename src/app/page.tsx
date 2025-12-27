@@ -197,19 +197,15 @@ const HomePage = async ({ searchParams }: PageProps) => {
           <div className="flex flex-col gap-4 rounded-3xl border border-white/5 bg-gradient-to-r from-[#0d0d0d] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
-                Auto scan
+                Library health
               </p>
-              <h2 className="text-2xl font-semibold">Latest snapshot synced</h2>
+              <h2 className="text-2xl font-semibold">Run scans when you&apos;re ready</h2>
               <p className="text-sm text-muted-foreground">
-                We automatically scanned your Liked Songs as soon as you signed in. Manual scans are still available from the sidebar for playlists.
+                Kick off a liked-songs or playlist scan from the sidebar whenever you want a new snapshot. {hasHistory ? "Your previous scans are summarized below." : "Start by running your first scan to capture a baseline."}
               </p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Completed at{" "}
-              {new Intl.DateTimeFormat("en", {
-                hour: "numeric",
-                minute: "2-digit"
-              }).format(new Date())}
+              Scans consume Spotify API calls, so we now run them on demand.
             </p>
           </div>
 
