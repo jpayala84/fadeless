@@ -24,14 +24,11 @@ export const ThemeToggle = ({ currentTheme }: ThemeToggleProps) => {
       "flex-1 rounded-2xl border px-4 py-3 text-center text-sm",
       selected
         ? "border-emerald-500 bg-emerald-500/10 text-foreground"
-        : "border-white/20 text-muted-foreground hover:text-foreground"
+        : "border-border/40 text-muted-foreground hover:text-foreground"
     );
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Choose a theme. This preference is stored in your browser.
-      </p>
       <div className="flex gap-3">
         <button
           type="button"

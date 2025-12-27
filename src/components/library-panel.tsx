@@ -26,7 +26,6 @@ type Props = {
   playlists: PlaylistSummary[];
   topArtists: ArtistSummary[];
   savedAlbums: AlbumSummary[];
-  likedSongs: SpotifyTrack[];
   playlistPreview?: PlaylistTrack[];
   monitoredPlaylists?: Record<string, boolean>;
   activeCollection?: {
@@ -44,9 +43,6 @@ const PANEL_TABS = [
 
 const PAGE_SIZE = 5;
 
-type LikedSongState = SpotifyTrack & { liked: boolean };
-type PlaylistTrackState = PlaylistTrack & { removed: boolean };
-
 const clampPage = (value: number, totalPages: number) =>
   Math.min(Math.max(value, 0), Math.max(totalPages - 1, 0));
 
@@ -56,7 +52,6 @@ export const LibraryPanel = ({
   playlists,
   topArtists,
   savedAlbums,
-  likedSongs,
   playlistPreview = [],
   monitoredPlaylists = {},
   activeCollection,
@@ -79,22 +74,18 @@ export const LibraryPanel = ({
 
   const [currentPage, setCurrentPage] = useState(clampPage(page, totalPages));
   const [activePanel, setActivePanel] = useState<(typeof PANEL_TABS)[number]["id"]>("playlists");
-  const [likedShelf, setLikedShelf] = useState<LikedSongState[]>(
-    () => likedSongs.map((song) => ({ ...song, liked: true }))
-  );
-  const [playlistTracks, setPlaylistTracks] = useState<PlaylistTrackState[]>(
-    () => playlistPreview.map((track) => ({ ...track, removed: false }))
+  const [playlistTracks, setPlaylistTracks] = useState<PlaylistTrack[]>(
+    () => playlistPreview.slice()
   );
   const [pendingMonitor, startMonitorTransition] = useTransition();
+  const [pendingScanAll, startScanAllTransition] = useTransition();
 
   useEffect(() => {
     setCurrentPage(clampPage(page, totalPages));
   }, [page, totalPages]);
 
   useEffect(() => {
-    setPlaylistTracks(
-      playlistPreview.map((track) => ({ ...track, removed: false }))
-    );
+    setPlaylistTracks(playlistPreview.slice());
   }, [playlistPreview]);
 
   const updateRoute = (
@@ -167,6 +158,10 @@ export const LibraryPanel = ({
     () => Object.values(monitoredPlaylists).filter(Boolean).length,
     [monitoredPlaylists]
   );
+  const trackedPlaylists = useMemo(
+    () => sortedPlaylists.filter((playlist) => monitoredPlaylists[playlist.id]),
+    [sortedPlaylists, monitoredPlaylists]
+  );
 
   const toggleMonitor = (playlist: PlaylistSummary, nextEnabled: boolean) => {
     startMonitorTransition(async () => {
@@ -191,36 +186,31 @@ export const LibraryPanel = ({
     });
   };
 
-  const toggleLikedSong = (songId: string) => {
-    const song = likedShelf.find((item) => item.id === songId);
-    setLikedShelf((songs) =>
-      songs.map((item) =>
-        item.id === songId ? { ...item, liked: !item.liked } : item
-      )
-    );
-    if (song) {
-      toast.info(
-        song.liked
-          ? `${song.name} queued for removal. Changes sync once Spotify write scopes are approved.`
-          : `${song.name} moved back into liked songs.`
-      );
+  const scanAllTracked = () => {
+    if (!trackedPlaylists.length) {
+      toast.info("Select playlists to track first.");
+      return;
     }
-  };
-
-  const togglePlaylistTrack = (trackId: string) => {
-    const track = playlistTracks.find((item) => item.id === trackId);
-    setPlaylistTracks((tracks) =>
-      tracks.map((item) =>
-        item.id === trackId ? { ...item, removed: !item.removed } : item
-      )
-    );
-    if (track) {
-      toast.info(
-        track.removed
-          ? `${track.name} restored to ${track.playlistName ?? "playlist"}.`
-          : `${track.name} marked for removal from playlist.`
-      );
-    }
+    startScanAllTransition(async () => {
+      for (const playlist of trackedPlaylists) {
+        try {
+          await fetch("/api/jobs/scan", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              mode: "playlist",
+              playlistId: playlist.id,
+              playlistName: playlist.name
+            })
+          });
+        } catch {
+          // ignore
+        }
+      }
+      toast.success("Scan started for tracked playlists.");
+    });
   };
 
   const handleKeyActivate = (
@@ -234,16 +224,16 @@ export const LibraryPanel = ({
   };
 
   return (
-    <section className="surface-card space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#151515] to-[#0c0c0c] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.55)] backdrop-blur">
+    <section className="surface-card space-y-5 rounded-3xl border border-border/40 bg-card/50 p-6 backdrop-blur">
       <div
         role="button"
         tabIndex={0}
         onClick={() => viewCollection("liked")}
         onKeyDown={(event) => handleKeyActivate(event, () => viewCollection("liked"))}
         className={cn(
-          "w-full rounded-3xl border border-white/10 bg-black/30 p-5 text-left shadow-inner shadow-black/30 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
+          "w-full rounded-3xl border border-border/40 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
           activeCollection?.type === "liked"
-            ? "border-emerald-400/60 bg-emerald-400/10"
+            ? "border-emerald-400/50 bg-emerald-400/10"
             : ""
         )}
       >
@@ -255,17 +245,11 @@ export const LibraryPanel = ({
             <p className="text-3xl font-semibold">
               {likedSongsCount.toLocaleString()}
             </p>
-            <p className="text-sm text-muted-foreground">
-              Tap to browse or stage changes to your liked catalog.
-            </p>
           </div>
           <div onClick={(event) => event.stopPropagation()}>
             <RunScanForm mode="liked" showStatus={false} />
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Snapshot scans always include your liked songs. We’ll sync edits once Spotify grants write scopes.
-        </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -277,8 +261,8 @@ export const LibraryPanel = ({
             className={cn(
               "rounded-full border px-4 py-1.5 text-sm transition",
               activePanel === tab.id
-                ? "border-emerald-400/80 bg-emerald-400/10 text-foreground"
-                : "border-white/10 text-muted-foreground hover:text-foreground"
+                ? "border-emerald-400/50 bg-emerald-400/10 text-foreground"
+                : "border-border/40 text-muted-foreground hover:text-foreground"
             )}
           >
             {tab.label}
@@ -288,14 +272,28 @@ export const LibraryPanel = ({
 
       {activePanel === "playlists" ? (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <p>Playlists sorted by last listened</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+            <button
+              type="button"
+              onClick={scanAllTracked}
+              disabled={!trackedPlaylists.length || pendingScanAll}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs transition",
+                trackedPlaylists.length
+                  ? "border-border/40 text-muted-foreground hover:text-foreground"
+                  : "border-border/20 opacity-40 cursor-not-allowed",
+                pendingScanAll ? "opacity-60 cursor-not-allowed" : ""
+              )}
+              aria-label="Scan all tracked playlists"
+            >
+              Scan tracked
+            </button>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => changePage(currentPage - 1)}
                 disabled={currentPage === 0}
-                className="rounded-full border border-white/15 px-2 py-1 disabled:opacity-30"
+                className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
                 aria-label="Previous playlists"
               >
                 ‹
@@ -307,7 +305,7 @@ export const LibraryPanel = ({
                 type="button"
                 onClick={() => changePage(currentPage + 1)}
                 disabled={currentPage >= totalPages - 1}
-                className="rounded-full border border-white/15 px-2 py-1 disabled:opacity-30"
+                className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
                 aria-label="Next playlists"
               >
                 ›
@@ -326,8 +324,8 @@ export const LibraryPanel = ({
                   className={cn(
                     "cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
                     isActive
-                      ? "border-emerald-400/70 bg-emerald-400/10"
-                      : "border-white/10 bg-black/20 hover:border-emerald-300/50"
+                      ? "border-emerald-400/50 bg-emerald-400/10"
+                      : "border-border/40 bg-card/30 hover:border-emerald-300/40"
                   )}
                   onClick={() => handlePlaylistFocus(playlist.id, playlist.name)}
                 >
@@ -372,8 +370,8 @@ export const LibraryPanel = ({
                           className={cn(
                             "rounded-full border px-3 py-1 text-[0.65rem] transition",
                             isTracked
-                              ? "border-emerald-400/70 text-emerald-300 hover:bg-emerald-400/10"
-                              : "border-white/20 text-muted-foreground hover:text-foreground",
+                              ? "border-emerald-400/50 text-emerald-300 hover:bg-emerald-400/10"
+                              : "border-border/40 text-muted-foreground hover:text-foreground",
                             pendingMonitor || (!isTracked && enabledMonitorCount >= 5)
                               ? "opacity-40 cursor-not-allowed"
                               : ""
@@ -397,7 +395,7 @@ export const LibraryPanel = ({
             })}
           </ul>
           {activeCollection?.type === "playlist" && playlistTracks.length > 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-black/30 p-4 shadow-inner shadow-black/30">
+            <div className="rounded-2xl border border-border/40 bg-card/30 p-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground">
                   Playlist overview
@@ -410,7 +408,7 @@ export const LibraryPanel = ({
                 {playlistTracks.map((track) => (
                   <div
                     key={track.id}
-                    className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/20 p-2 text-xs"
+                    className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 p-2 text-xs"
                   >
                     {track.imageUrl ? (
                       <Image
@@ -423,48 +421,17 @@ export const LibraryPanel = ({
                     ) : (
                       <div className="h-10 w-10 rounded-lg bg-gradient-to-b from-emerald-400/20 to-transparent" />
                     )}
-                    {track.id ? (
-                      <a
-                        href={`https://open.spotify.com/track/${track.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1"
-                      >
-                        <p className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-                          {track.name}
-                        </p>
-                        <p className="text-[0.65rem] text-muted-foreground">
-                          {track.artists.join(", ")}
-                        </p>
-                      </a>
-                    ) : (
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">
-                          {track.name}
-                        </p>
-                        <p className="text-[0.65rem] text-muted-foreground">
-                          {track.artists.join(", ")}
-                        </p>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => togglePlaylistTrack(track.id)}
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-[0.65rem]",
-                        track.removed
-                          ? "border-emerald-400/80 text-emerald-300"
-                          : "border-red-400/80 text-red-300"
-                      )}
-                    >
-                      {track.removed ? "Undo" : "Remove"}
-                    </button>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {track.name}
+                      </p>
+                      <p className="text-[0.65rem] text-muted-foreground">
+                        {track.artists.join(", ")}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
-              <p className="pt-2 text-[0.65rem] text-muted-foreground">
-                Changes reflect locally until Spotify grants modify scopes.
-              </p>
             </div>
           ) : null}
         </div>
@@ -488,10 +455,10 @@ export const LibraryPanel = ({
                     viewCollection("album", { id: album.id, name: album.name })
                   }
                   className={cn(
-                    "flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-inner shadow-black/30 transition",
+                    "flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-inner transition",
                     isActive
                       ? "border-emerald-400/70 bg-emerald-400/10"
-                      : "border-white/10 bg-black/25 hover:border-emerald-400/60"
+                      : "border-border/40 bg-card/30 hover:border-emerald-300/40"
                   )}
                 >
                   {album.imageUrl ? (
@@ -508,18 +475,9 @@ export const LibraryPanel = ({
                   <div>
                     <p className="font-medium">{album.name}</p>
                     <p className="text-xs text-muted-foreground">{album.artist}</p>
-                    <div className="mt-1 flex gap-2 text-[0.65rem]">
-                      <span className="text-emerald-400">View tracks</span>
-                      <a
-                        href={`https://open.spotify.com/album/${album.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-muted-foreground underline-offset-4 hover:underline"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        Spotify
-                      </a>
-                    </div>
+                    <p className="mt-1 text-[0.65rem] text-muted-foreground">
+                      View tracks
+                    </p>
                   </div>
                 </button>
               );
@@ -541,7 +499,7 @@ export const LibraryPanel = ({
               href={`https://open.spotify.com/artist/${artist.id}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/25 p-3 text-sm shadow-inner shadow-black/25 transition hover:border-emerald-300"
+              className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/30 p-3 text-sm transition hover:border-emerald-300/40"
             >
               {artist.imageUrl ? (
                 <Image

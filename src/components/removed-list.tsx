@@ -17,7 +17,7 @@ const formatDate = (value: Date) =>
   }).format(value);
 
 export const RemovedList = ({ title, events, emptyMessage }: Props) => (
-  <section className="surface-card space-y-5 rounded-3xl border border-white/5 bg-gradient-to-b from-[#111]/80 to-[#0a0a0a]/80 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+  <section className="surface-card space-y-5 rounded-3xl border border-border/40 bg-card/50 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur">
     <div className="flex items-center justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.35em] text-emerald-400/80">
@@ -34,7 +34,7 @@ export const RemovedList = ({ title, events, emptyMessage }: Props) => (
         {events.map((event) => (
           <article
             key={event.id}
-            className="rounded-2xl border border-white/5 bg-black/40 p-4 text-sm shadow-inner shadow-black/30 transition hover:border-primary/50"
+            className="rounded-2xl border border-border/40 bg-card/40 p-4 text-sm shadow-inner transition hover:border-primary/40"
           >
             <div className="flex items-center gap-4">
               {event.albumImageUrl ? (
@@ -49,54 +49,26 @@ export const RemovedList = ({ title, events, emptyMessage }: Props) => (
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary/30 to-primary/5" />
               )}
               <div className="flex flex-1 items-center justify-between gap-3">
-                {event.trackId ? (
-                  <a
-                    href={`https://open.spotify.com/track/${event.trackId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <p className="text-base font-semibold text-foreground underline-offset-4 hover:underline">
-                      {event.trackName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {event.artists.join(", ")} ·{" "}
-                      <span className="text-emerald-300">{event.albumName}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Removed from{" "}
-                      <span className="text-foreground">
-                        {event.playlistNames.join(", ") || "Liked Songs"}
-                      </span>
-                    </p>
-                  </a>
-                ) : (
-                  <div>
-                    <p className="text-base font-semibold text-foreground">
-                      {event.trackName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {event.artists.join(", ")} ·{" "}
-                      <span className="text-emerald-300">{event.albumName}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Removed from{" "}
-                      <span className="text-foreground">
-                        {event.playlistNames.join(", ") || "Liked Songs"}
-                      </span>
-                    </p>
-                  </div>
-                )}
+                <div className="block">
+                  <p className="text-base font-semibold text-foreground">
+                    {event.trackName}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {event.artists.join(", ")} ·{" "}
+                    <span className="text-muted-foreground">{event.albumName}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Removed from{" "}
+                    <span className="text-foreground">
+                      {event.playlistNames.join(", ") || "Liked Songs"}
+                    </span>
+                  </p>
+                </div>
                 <span className="text-xs text-muted-foreground">
                   {formatDate(event.removedAt)}
                 </span>
               </div>
             </div>
-            {event.replacementTrackName ? (
-              <p className="mt-3 text-xs text-emerald-400">
-                Possible match: {event.replacementTrackName}
-              </p>
-            ) : null}
           </article>
         ))}
       </div>

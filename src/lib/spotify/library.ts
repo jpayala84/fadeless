@@ -2,8 +2,7 @@ import { getSpotifyClient, withAccessToken } from '@/lib/spotify/service';
 import type {
   AlbumSummary,
   ArtistSummary,
-  PlaylistSummary,
-  SpotifyTrack
+  PlaylistSummary
 } from '@/lib/spotify/client';
 
 export type LibraryOverview = {
@@ -11,7 +10,6 @@ export type LibraryOverview = {
   savedAlbumsCount: number;
   playlists: PlaylistSummary[];
   topArtists: ArtistSummary[];
-  likedSongsPreview: SpotifyTrack[];
   savedAlbums: AlbumSummary[];
 };
 
@@ -27,7 +25,6 @@ export const getLibraryOverview = async (
       playlists,
       topArtists,
       recentPlaylists,
-      likedSongsPreview,
       savedAlbums
     ] = await Promise.all([
       client.fetchLikedTracksTotal(accessToken).catch(() => 0),
@@ -35,7 +32,6 @@ export const getLibraryOverview = async (
       client.fetchPlaylistSummaries(accessToken).catch(() => []),
       client.fetchTopArtists(accessToken).catch(() => []),
       client.fetchRecentlyPlayedPlaylists(accessToken).catch(() => []),
-      client.fetchLikedTracksPreview(accessToken).catch(() => []),
       client.fetchSavedAlbums(accessToken).catch(() => [])
     ]);
 
@@ -64,7 +60,6 @@ export const getLibraryOverview = async (
       savedAlbumsCount,
       playlists: orderedPlaylists,
       topArtists,
-      likedSongsPreview,
       savedAlbums
     };
   });

@@ -54,6 +54,10 @@ export type SpotifyClient = {
     accessToken: string,
     options?: { maxPages?: number }
   ) => Promise<SpotifyTrack[]>;
+  fetchLikedTracksPage: (
+    accessToken: string,
+    options: { offset: number; limit: number }
+  ) => Promise<{ tracks: SpotifyTrack[]; total: number }>;
   fetchPlaylists: (accessToken: string) => Promise<PlaylistTrack[]>;
   fetchPlaylistSummaries: (accessToken: string) => Promise<PlaylistSummary[]>;
   fetchPlaylistPreview: (
@@ -68,6 +72,12 @@ export type SpotifyClient = {
     playlistName?: string,
     options?: { maxPages?: number }
   ) => Promise<PlaylistTrack[]>;
+  fetchPlaylistTracksPage: (
+    accessToken: string,
+    playlistId: string,
+    playlistName: string | undefined,
+    options: { offset: number; limit: number }
+  ) => Promise<{ tracks: PlaylistTrack[]; total: number }>;
   fetchLikedTracksTotal: (accessToken: string) => Promise<number>;
   fetchSavedAlbumsTotal: (accessToken: string) => Promise<number>;
   fetchSavedAlbums: (
@@ -183,6 +193,49 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
         };
       }
     });
+
+  const fetchLikedTracksPage = async (
+    accessToken: string,
+    options: { offset: number; limit: number }
+  ): Promise<{ tracks: SpotifyTrack[]; total: number }> => {
+    const response: Response = await fetch(
+      `${API_BASE}/me/tracks?limit=${options.limit}&offset=${options.offset}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        },
+        cache: "no-store"
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to load liked songs page: ${text}`);
+    }
+
+    const payload = await response.json();
+    const tracks: SpotifyTrack[] = (payload.items ?? [])
+      .map((item: any) => {
+        const track = item.track;
+        if (!track) {
+          return null;
+        }
+        return {
+          id: track.id,
+          name: track.name,
+          artists: track.artists?.map((artist: any) => artist.name) ?? [],
+          album: track.album?.name ?? "",
+          imageUrl: track.album?.images?.[0]?.url,
+          durationMs: track.duration_ms
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      tracks,
+      total: payload.total ?? tracks.length
+    };
+  };
 
   const fetchPlaylists = async (
     accessToken: string
@@ -486,6 +539,54 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
     });
   };
 
+  const fetchPlaylistTracksPage = async (
+    accessToken: string,
+    playlistId: string,
+    playlistName: string | undefined,
+    options: { offset: number; limit: number }
+  ): Promise<{ tracks: PlaylistTrack[]; total: number }> => {
+    const response: Response = await fetch(
+      `${API_BASE}/playlists/${playlistId}/tracks?limit=${options.limit}&offset=${options.offset}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        },
+        cache: "no-store"
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to load playlist tracks: ${text}`);
+    }
+
+    const payload = await response.json();
+    const tracks: PlaylistTrack[] = (payload.items ?? [])
+      .map((item: any) => {
+        const track = item.track;
+        if (!track) {
+          return null;
+        }
+        return {
+          id: track.id,
+          name: track.name,
+          artists: track.artists?.map((artist: any) => artist.name) ?? [],
+          album: track.album?.name ?? "",
+          playlistId,
+          playlistName: playlistName ?? "",
+          addedAt: item.added_at,
+          imageUrl: track.album?.images?.[0]?.url,
+          durationMs: track.duration_ms
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      tracks,
+      total: payload.total ?? tracks.length
+    };
+  };
+
   const fetchRecentlyPlayedPlaylists = async (
     accessToken: string
   ): Promise<string[]> => {
@@ -521,10 +622,12 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
     exchangeCode,
     refreshAccessToken,
     fetchLikedTracks,
+    fetchLikedTracksPage,
     fetchPlaylists,
     fetchPlaylistSummaries,
     fetchPlaylistPreview,
     fetchPlaylistTracks,
+    fetchPlaylistTracksPage,
     fetchLikedTracksTotal,
     fetchSavedAlbumsTotal,
     fetchSavedAlbums,

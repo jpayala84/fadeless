@@ -51,15 +51,15 @@ export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-2xl space-y-5 rounded-3xl border border-white/10 bg-black/90 p-8 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 backdrop-blur">
+      <div className="surface-card w-full max-w-2xl space-y-5 rounded-3xl border border-border/40 bg-card/60 p-8 shadow-2xl">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-emerald-300">
             Welcome
           </p>
           <h2 className="text-2xl font-semibold">Pick playlists to monitor</h2>
           <p className="text-sm text-muted-foreground">
-            Choose up to 5 playlists. We’ll keep them scanned automatically so you don’t miss removals.
+            Choose up to 5 playlists to track. You can scan them together anytime.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -71,10 +71,10 @@ export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
                 type="button"
                 onClick={() => toggle(playlist.id)}
                 className={cn(
-                  "rounded-2xl border p-4 text-left shadow-inner shadow-black/30 transition",
+                  "rounded-2xl border p-4 text-left shadow-inner transition",
                   isSelected
                     ? "border-emerald-400 bg-emerald-400/10"
-                    : "border-white/10 bg-black/20 hover:border-emerald-400/60"
+                    : "border-border/40 bg-card/30 hover:border-emerald-300/40"
                 )}
               >
                 <p className="font-medium text-foreground">{playlist.name}</p>
@@ -91,7 +91,7 @@ export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
             type="button"
             disabled={pending}
             onClick={handleSubmit}
-            className="rounded-full bg-emerald-500 px-4 py-2 font-semibold text-black transition hover:bg-emerald-400 disabled:opacity-60"
+            className="rounded-full bg-emerald-500 px-4 py-2 font-semibold text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-60"
           >
             Start monitoring
           </button>
@@ -100,4 +100,3 @@ export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
     </div>
   );
 };
-

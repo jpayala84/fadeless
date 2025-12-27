@@ -17,6 +17,7 @@ export const LikedBaselineBanner = ({
 }: Props) => {
   const [indexedCount, setIndexedCount] = useState(initialIndexedCount);
   const [completed, setCompleted] = useState(initiallyCompleted);
+  const [started, setStarted] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const percent = useMemo(() => {
@@ -27,7 +28,7 @@ export const LikedBaselineBanner = ({
   }, [indexedCount, totalCount]);
 
   useEffect(() => {
-    if (completed) {
+    if (completed || !started) {
       return;
     }
 
@@ -87,41 +88,57 @@ export const LikedBaselineBanner = ({
         clearTimeout(timeout);
       }
     };
-  }, [completed]);
+  }, [completed, started]);
 
   if (completed) {
     return null;
   }
 
   return (
-    <div className="surface-card rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/40">
+    <div className="surface-card rounded-3xl border border-border/40 bg-card/50 p-6 shadow-inner">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-emerald-300">
-            Setting up your library
+            Getting started
           </p>
-          <h2 className="text-xl font-semibold">Indexing your Liked Songs</h2>
+          <h2 className="text-xl font-semibold">Create your first Liked Songs snapshot</h2>
           <p className="text-sm text-muted-foreground">
-            We start with your most recent 500, then continue in the background so you can use the app immediately.
+            This baseline lets us detect removals later.
           </p>
         </div>
-        <div className="text-right text-xs text-muted-foreground">
-          {indexedCount.toLocaleString()} / {totalCount.toLocaleString()}
-        </div>
+        {!started ? (
+          <button
+            type="button"
+            onClick={() => setStarted(true)}
+            className="rounded-full border border-border/40 bg-card/40 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
+          >
+            Start
+          </button>
+        ) : (
+          <div className="text-right text-xs text-muted-foreground">
+            {indexedCount.toLocaleString()} / {totalCount.toLocaleString()}
+          </div>
+        )}
       </div>
-      <div className="mt-4">
-        <div className="h-2 overflow-hidden rounded-full bg-black/40">
+      {started ? (
+        <div className="mt-4">
+          <div className="h-2 overflow-hidden rounded-full bg-muted/60">
+            <div
+              className={cn(
+                "h-full bg-emerald-400 transition-all",
+                percent ? "" : "w-2"
+              )}
+              style={{ width: `${Math.max(percent, 2)}%` }}
+            />
+          </div>
           <div
-            className={cn("h-full bg-emerald-400 transition-all", percent ? "" : "w-2")}
-            style={{ width: `${Math.max(percent, 2)}%` }}
-          />
+            className="mt-2 flex items-center justify-between text-xs text-muted-foreground"
+          >
+            <span>{message ?? "Indexing…"}</span>
+            <span>{percent}%</span>
+          </div>
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{message ?? "Indexing…"}</span>
-          <span>{percent}%</span>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 };
-

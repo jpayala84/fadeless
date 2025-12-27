@@ -12,9 +12,7 @@ import { LibraryPanel } from "@/components/library-panel";
 import { TrackTable } from "@/components/track-table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LikedBaselineBanner } from "@/components/liked-baseline-banner";
-import { PlaylistMonitoringSettings } from "@/components/playlist-monitoring-settings";
 import { PlaylistOnboardingDialog } from "@/components/playlist-onboarding-dialog";
-import { AutoMonitorRunner } from "@/components/auto-monitor-runner";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   listRemovalEvents,
@@ -72,6 +70,8 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const collectionName = searchParams?.collectionName;
   const collectionPageParam =
     Number(searchParams?.collectionPage ?? "0") || 0;
+  const collectionPage = Math.max(0, collectionPageParam);
+  const collectionPageSize = 50;
 
   const [weeklyRaw, allRaw, library] = await Promise.all([
     listRemovalEventsForWeek({
@@ -177,31 +177,23 @@ const HomePage = async ({ searchParams }: PageProps) => {
     return query ? `/?${query}` : "/";
   };
 
-  const paginateTrackList = (tracks: SpotifyTrack[]) => {
-    const pageSize = 50;
-    const totalPages = Math.max(1, Math.ceil(tracks.length / pageSize));
-    const currentPage = Math.min(
-      Math.max(collectionPageParam, 0),
-      totalPages - 1
-    );
-    const start = currentPage * pageSize;
-    const slice = tracks.slice(start, start + pageSize);
-    const pagination =
-      totalPages > 1
-        ? {
-            currentPage,
-            totalPages,
-            prevHref:
-              currentPage > 0
-                ? buildHref({ collectionPage: String(currentPage - 1) })
-                : undefined,
-            nextHref:
-              currentPage < totalPages - 1
-                ? buildHref({ collectionPage: String(currentPage + 1) })
-                : undefined
-          }
-        : undefined;
-    return { slice, pagination };
+  const buildPagination = (totalItems: number) => {
+    const totalPages = Math.max(1, Math.ceil(totalItems / collectionPageSize));
+    const currentPage = Math.min(collectionPage, totalPages - 1);
+    return totalPages > 1
+      ? {
+          currentPage,
+          totalPages,
+          prevHref:
+            currentPage > 0
+              ? buildHref({ collectionPage: String(currentPage - 1) })
+              : undefined,
+          nextHref:
+            currentPage < totalPages - 1
+              ? buildHref({ collectionPage: String(currentPage + 1) })
+              : undefined
+        }
+      : undefined;
   };
 
   let playlistPreview: PlaylistTrack[] = [];
@@ -217,6 +209,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
     title: string;
     subtitle?: string;
     externalHref?: string;
+    footerCta?: { href: string; label: string };
     tracks: Array<{
       id: string;
       name: string;
@@ -236,40 +229,56 @@ const HomePage = async ({ searchParams }: PageProps) => {
   let trackTableData: TrackTableData | null = null;
 
   if (collectionType === "playlist" && collectionId) {
-    const playlistTracks = await withAccessToken(user.id, (accessToken) =>
+    const playlistPageData = await withAccessToken(user.id, (accessToken) =>
       client
-        .fetchPlaylistTracks(accessToken, collectionId, collectionName, {
-          maxPages: 3
+        .fetchPlaylistTracksPage(accessToken, collectionId, collectionName, {
+          offset: collectionPage * collectionPageSize,
+          limit: collectionPageSize
         })
-        .catch(() => [])
+        .catch(() => ({ tracks: [], total: 0 }))
     );
     const playlistMeta =
       library.playlists.find((playlist) => playlist.id === collectionId) ?? null;
-    const { slice, pagination } = paginateTrackList(playlistTracks);
+    const pagination = buildPagination(playlistPageData.total);
     trackTableData = {
       title: collectionName ?? playlistMeta?.name ?? "Playlist",
-      subtitle: `${playlistTracks.length} tracks`,
+      subtitle: `${playlistPageData.total.toLocaleString()} tracks`,
       externalHref: `https://open.spotify.com/playlist/${collectionId}`,
-      tracks: mapToRows(slice),
+      tracks: mapToRows(playlistPageData.tracks),
       pagination
     };
   } else if (collectionType === "liked") {
-    const likedTracks = await withAccessToken(user.id, (accessToken) =>
-      client.fetchLikedTracks(accessToken, { maxPages: 4 }).catch(() => [])
+    const likedPageData = await withAccessToken(user.id, (accessToken) =>
+      client
+        .fetchLikedTracksPage(accessToken, {
+          offset: collectionPage * collectionPageSize,
+          limit: collectionPageSize
+        })
+        .catch(() => ({ tracks: [], total: 0 }))
     );
-    const { slice, pagination } = paginateTrackList(likedTracks);
+    const pagination = buildPagination(likedPageData.total);
     trackTableData = {
       title: "Liked Songs",
-      subtitle: `${likedTracks.length} tracks`,
-      externalHref: "https://open.spotify.com/collection/tracks",
-      tracks: mapToRows(slice),
+      subtitle: `${likedPageData.total.toLocaleString()} tracks`,
+      footerCta: {
+        href: "https://open.spotify.com/collection/tracks",
+        label: "Open in Spotify"
+      },
+      tracks: mapToRows(likedPageData.tracks),
       pagination
     };
   } else if (collectionType === "album" && collectionId) {
     const albumTracks = await withAccessToken(user.id, (accessToken) =>
       client.fetchAlbumTracks(accessToken, collectionId).catch(() => [])
     );
-    const { slice, pagination } = paginateTrackList(albumTracks);
+    const totalPages = Math.max(
+      1,
+      Math.ceil(albumTracks.length / collectionPageSize)
+    );
+    const currentPage = Math.min(collectionPage, totalPages - 1);
+    const start = currentPage * collectionPageSize;
+    const slice = albumTracks.slice(start, start + collectionPageSize);
+    const pagination = buildPagination(albumTracks.length);
     trackTableData = {
       title: collectionName ?? "Album",
       subtitle: `${albumTracks.length} tracks`,
@@ -292,9 +301,6 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const playlistsAffected = new Set(
     all.flatMap((event) => event.playlistNames ?? [])
   ).size;
-  const replacementCount = all.filter(
-    (event) => Boolean(event.replacementTrackId)
-  ).length;
 
   const hasHistory = all.length > 0;
   const weeklyEmptyMessage = hasHistory
@@ -316,11 +322,6 @@ const HomePage = async ({ searchParams }: PageProps) => {
       helper:
         library.playlists.slice(0, 3).map((playlist) => playlist.name).join(", ") ||
         "Scans populate playlist impact."
-    },
-    {
-      label: "Replacement matches",
-      value: `${replacementCount} suggestions`,
-      helper: replacementCount ? "All pending review" : "Matches appear after scans"
     }
   ];
 
@@ -339,38 +340,21 @@ const HomePage = async ({ searchParams }: PageProps) => {
     view !== "settings" && !trackTableData && (likedBaseline ? !likedBaseline.completed : likedSnapshotCount === 0);
 
   return (
-    <main className="min-h-screen bg-[#020202] text-foreground">
+    <main className="min-h-screen bg-background text-foreground">
       <PlaylistOnboardingDialog
         playlists={library.playlists}
         open={needsOnboarding}
       />
-      {view !== "settings" ? (
-        <AutoMonitorRunner playlists={monitoredTargets} runLikedScan />
-      ) : null}
       <DashboardHeader user={user} view={view} />
       <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">
         <section className="space-y-6">
-          <div className="surface-card flex flex-col gap-4 rounded-3xl border border-white/5 bg-gradient-to-r from-[#0d0d0d] to-[#050505] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)] sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
-                Library health
-              </p>
-              <h2 className="text-2xl font-semibold">Run scans when you&apos;re ready</h2>
-              <p className="text-sm text-muted-foreground">
-                Kick off a liked-songs or playlist scan from the sidebar whenever you want a new snapshot. {hasHistory ? "Your previous scans are summarized below." : "Start by running your first scan to capture a baseline."}
-              </p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Scans consume Spotify API calls, so we now run them on demand.
-            </p>
-          </div>
-
           {trackTableData ? (
             <TrackTable
               title={trackTableData.title}
               subtitle={trackTableData.subtitle}
               tracks={trackTableData.tracks}
               externalHref={trackTableData.externalHref}
+              footerCta={trackTableData.footerCta}
               pagination={trackTableData.pagination}
               backHref={buildHref({
                 collection: undefined,
@@ -388,28 +372,30 @@ const HomePage = async ({ searchParams }: PageProps) => {
                   initiallyCompleted={likedBaseline?.completed ?? false}
                 />
               ) : null}
-              <div className="flex flex-wrap gap-2">
-                {tabs.map((tab) => (
-                  <Link
-                    key={tab.id}
-                    href={buildHref({ view: tab.id === "weekly" ? undefined : tab.id })}
-                    className={`rounded-full border px-4 py-2 text-sm transition ${
-                      view === tab.id
-                        ? "border-emerald-400 bg-emerald-400/15 text-foreground"
-                        : "border-white/10 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                  </Link>
-                ))}
-              </div>
+              {view !== "settings" ? (
+                <div className="flex flex-wrap gap-2">
+                  {tabs.map((tab) => (
+                    <Link
+                      key={tab.id}
+                      href={buildHref({ view: tab.id === "weekly" ? undefined : tab.id })}
+                      className={`rounded-full border px-4 py-2 text-sm transition ${
+                        view === tab.id
+                          ? "border-emerald-400/50 bg-emerald-400/10 text-foreground"
+                          : "border-border/40 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {tab.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
 
               {view !== "settings" ? (
                 <div className="grid gap-4 md:grid-cols-3">
                   {stats.map((stat) => (
                     <div
                       key={stat.label}
-                      className="surface-card rounded-2xl border border-white/5 bg-black/30 p-4 shadow-inner shadow-black/40"
+                      className="surface-card rounded-2xl border border-border/40 bg-card/50 p-4 shadow-inner"
                     >
                       <p className="text-xs uppercase tracking-[0.35em] text-emerald-400">
                         {stat.label}
@@ -439,38 +425,25 @@ const HomePage = async ({ searchParams }: PageProps) => {
 
               {view === "settings" ? (
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div className="surface-card space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30">
+                  <div className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6">
                     <h2 className="text-xl font-semibold">Notification preferences</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Decide how the weekly digest shows up. Emails summarize removals while in-app keeps an unread queue.
-                    </p>
                     <NotificationPreferenceForm
                       channel={user.notificationChannel}
                       enabled={user.notificationsEnabled}
                     />
                   </div>
-                  <div className="surface-card space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30">
+                  <div className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6">
                     <h2 className="text-xl font-semibold">Appearance</h2>
                     <ThemeToggle currentTheme={themeCookie} />
                   </div>
-                  <div className="surface-card space-y-4 rounded-3xl border border-white/5 bg-black/30 p-6 shadow-inner shadow-black/30 md:col-span-2">
-                    <h2 className="text-xl font-semibold">Playlist monitoring</h2>
-                    <PlaylistMonitoringSettings
-                      playlists={library.playlists}
-                      monitored={monitoredPlaylists}
-                    />
-                  </div>
-                  <div className="space-y-4 rounded-3xl border border-red-500/40 bg-red-500/5 p-6 shadow-inner shadow-red-900/40">
+                  <div className="space-y-4 rounded-3xl border border-red-500/30 bg-red-500/5 p-6 shadow-inner">
                     <h2 className="text-xl font-semibold text-red-200">Danger zone</h2>
-                    <p className="text-sm text-red-100/80">
-                      Export or delete your entire history. Actions are irreversible and comply with the PRD’s right-to-forget.
-                    </p>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between rounded-2xl border border-white/20 bg-black/20 px-4 py-2 text-sm text-muted-foreground">
+                      <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/40 px-4 py-2 text-sm text-muted-foreground">
                         Export removal archive
-                        <span className="text-xs text-white/70">JSON / CSV</span>
+                        <span className="text-xs text-muted-foreground">JSON / CSV</span>
                       </div>
-                      <button className="w-full rounded-full border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20">
+                      <button className="w-full rounded-full border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/10">
                         Export archive
                       </button>
                       <form action={deleteHistoryAction}>
@@ -494,22 +467,11 @@ const HomePage = async ({ searchParams }: PageProps) => {
               playlists={library.playlists}
               topArtists={library.topArtists}
               savedAlbums={library.savedAlbums}
-              likedSongs={library.likedSongsPreview}
               playlistPreview={playlistPreview}
               monitoredPlaylists={monitoredPlaylists}
               activeCollection={{ type: collectionType, id: collectionId }}
               page={playlistPage}
             />
-            <section className="surface-card space-y-2 rounded-3xl border border-white/5 bg-black/30 p-5 text-sm text-muted-foreground shadow-inner shadow-black/40">
-              <p className="text-sm font-semibold text-foreground">Scan health & rate limits</p>
-              <p>
-                Spotify calls are paginated + throttled to respect API caps. Cron runners should space scans per user.
-              </p>
-              <p className="text-sm font-semibold text-foreground pt-3">One-click deletion</p>
-              <p>
-                Product requirements demand reversible, append-only history with a delete option. Ensure the danger-zone flow stays wired to Prisma.
-              </p>
-            </section>
           </aside>
         ) : null}
       </div>
