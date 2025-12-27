@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { deleteHistoryAction } from "@/app/actions/delete-history";
 import { LandingHero } from "@/components/landing-hero";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { RemovedList } from "@/components/removed-list";
@@ -296,9 +297,11 @@ const HomePage = async ({ searchParams }: PageProps) => {
                       <button className="w-full rounded-full border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20">
                         Export archive
                       </button>
-                      <button className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500/80">
-                        Delete my data
-                      </button>
+                      <form action={deleteHistoryAction}>
+                        <button className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500/80">
+                          Delete my data
+                        </button>
+                      </form>
                     </div>
                   </div>
                 </div>
