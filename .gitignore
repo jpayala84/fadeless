@@ -10,3 +10,6 @@ pnpm-debug.log*
 .env.production
 .vercel
 
+
+# Local Netlify folder
+.netlify

@@ -13,6 +13,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@netlify/functions": "^5.1.2",
     "@prisma/client": "^5.19.1",
     "@radix-ui/react-slot": "^1.0.2",
     "class-variance-authority": "^0.7.0",
