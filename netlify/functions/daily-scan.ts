@@ -13,7 +13,7 @@ export const config = {
 
 const MAX_PLAYLISTS_PER_USER = 5;
 
-export const handler: Handler = async () => {
+export const handler: Handler = async (_event, _context) => {
   console.info("[cron] starting run", new Date().toISOString());
   const users = await prisma.user.findMany({
     include: {
