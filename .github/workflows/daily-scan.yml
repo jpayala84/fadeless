@@ -1,0 +1,17 @@
+name: Daily Netlify Scan
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # every day at 07:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  trigger-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Netlify function
+        env:
+          NETLIFY_FUNCTION_URL: https://lostrack.netlify.app/.netlify/functions/daily-scan
+        run: |
+          echo "Triggering Netlify function at $NETLIFY_FUNCTION_URL"
+          curl -s -X POST "$NETLIFY_FUNCTION_URL"
