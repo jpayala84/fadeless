@@ -2,7 +2,7 @@ name: Daily Netlify Scan
 
 on:
   schedule:
-    - cron: "0 7 * * *" # every day at 07:00 UTC
+    - cron: "*/1 * * * *" # every minute (testing)
   workflow_dispatch: {}
 
 jobs:
