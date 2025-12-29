@@ -14,8 +14,10 @@ export const config = {
 const MAX_PLAYLISTS_PER_USER = 5;
 
 export const handler: Handler = async () => {
+  console.info("[cron] starting run", new Date().toISOString());
   const users = await prisma.user.findMany({
     include: {
+      tokens: true,
       monitoredPlaylists: {
         where: { enabled: true },
         take: MAX_PLAYLISTS_PER_USER
@@ -28,6 +30,10 @@ export const handler: Handler = async () => {
   const client = getSpotifyClient();
 
   for (const user of users) {
+    if (!user.tokens) {
+      console.warn("[cron] skipping user without tokens", user.id);
+      continue;
+    }
     // Liked scan (light: single page to reduce API load)
     try {
       await withAccessToken(user.id, async (accessToken) =>
@@ -45,6 +51,8 @@ export const handler: Handler = async () => {
           { type: "liked" }
         )
       );
+      );
+      console.info("[cron] liked scan complete", user.id);
     } catch (error) {
       console.error("[cron-liked-scan]", user.id, error);
     }
@@ -67,6 +75,8 @@ export const handler: Handler = async () => {
             { type: "playlist", playlistId: playlist.playlistId, playlistName: playlist.playlistName }
           )
         );
+        );
+        console.info("[cron] playlist scan complete", user.id, playlist.playlistId);
       } catch (error) {
         console.error("[cron-playlist-scan]", user.id, playlist.playlistId, error);
       }
