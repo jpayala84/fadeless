@@ -91,7 +91,10 @@ export const runDailyScan = async (
 
   await repo.appendSnapshot(userId, currentSnapshotData, target);
 
-  const diff = diffSnapshots(previousSnapshot, currentSnapshotData);
+  const diff =
+    previousSnapshot.length === 0
+      ? { removed: [], potentialReplacements: [] }
+      : diffSnapshots(previousSnapshot, currentSnapshotData);
   if (diff.removed.length > 0) {
     await removalEvents.record(userId, diff.removed);
   }

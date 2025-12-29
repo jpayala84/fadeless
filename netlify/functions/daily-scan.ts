@@ -46,9 +46,9 @@ export const handler = (async (
             repo: snapshotRepo,
             removalEvents: removalRepo,
             spotify: {
-              fetchLikedTracks: () => client.fetchLikedTracks(accessToken, { maxPages: 1 }),
+              fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
               fetchPlaylistTracks: (id, name) =>
-                client.fetchPlaylistTracks(accessToken, id, name, { maxPages: 2 })
+                client.fetchPlaylistTracks(accessToken, id, name)
             }
           },
           { type: "liked" }
@@ -69,9 +69,9 @@ export const handler = (async (
               repo: snapshotRepo,
               removalEvents: removalRepo,
               spotify: {
-                fetchLikedTracks: () => client.fetchLikedTracks(accessToken, { maxPages: 1 }),
+                fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
                 fetchPlaylistTracks: (id, name) =>
-                  client.fetchPlaylistTracks(accessToken, id, name, { maxPages: 2 })
+                  client.fetchPlaylistTracks(accessToken, id, name)
               }
             },
             { type: "playlist", playlistId: playlist.playlistId, playlistName: playlist.playlistName }
