@@ -1,6 +1,7 @@
 import { getEnv } from '@/lib/env';
 import {
   loadEncryptedTokens,
+  setReauthRequired,
   storeEncryptedTokens
 } from '@/lib/db/user-repository';
 import { decrypt, encrypt } from '@/lib/security/encryption';
@@ -35,7 +36,12 @@ export const persistTokens = async ({
     scope,
     expiresAt: new Date(expiresAt)
   });
+  await setReauthRequired(userId, false);
 };
+
+const isInvalidGrantError = (error: unknown) =>
+  error instanceof Error &&
+  /invalid[_\s-]?grant/i.test(error.message ?? '');
 
 export const withAccessToken = async <T>(
   userId: string,
@@ -52,19 +58,33 @@ export const withAccessToken = async <T>(
   const now = Date.now();
 
   if (tokens.expiresAt.getTime() - 60_000 <= now) {
-    const refreshed = await client.refreshAccessToken(refreshToken);
-    accessToken = refreshed.accessToken;
-    const scope = refreshed.scope || tokens.scope;
-    await storeEncryptedTokens({
-      userId,
-      accessToken: encrypt(refreshed.accessToken),
-      refreshToken: encrypt(refreshToken),
-      scope,
-      expiresAt: new Date(refreshed.expiresAt)
-    });
+    try {
+      const refreshed = await client.refreshAccessToken(refreshToken);
+      accessToken = refreshed.accessToken;
+      const scope = refreshed.scope || tokens.scope;
+      await storeEncryptedTokens({
+        userId,
+        accessToken: encrypt(refreshed.accessToken),
+        refreshToken: encrypt(refreshToken),
+        scope,
+        expiresAt: new Date(refreshed.expiresAt)
+      });
+    } catch (error) {
+      if (isInvalidGrantError(error)) {
+        await setReauthRequired(userId, true);
+      }
+      throw error;
+    }
   }
 
-  return execute(accessToken);
+  try {
+    return await execute(accessToken);
+  } catch (error) {
+    if (isInvalidGrantError(error)) {
+      await setReauthRequired(userId, true);
+    }
+    throw error;
+  }
 };
 
 export const fetchSpotifyProfile = async (accessToken: string) => {

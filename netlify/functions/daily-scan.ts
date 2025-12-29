@@ -6,9 +6,8 @@ import { createSnapshotRepository } from "../../src/lib/db/snapshot-repository";
 import { runDailyScan } from "../../src/lib/jobs/daily-scan";
 import { getSpotifyClient, withAccessToken } from "../../src/lib/spotify/service";
 
-// Every minute for testing. Change to "@daily" (or "0 7 * * *") after verification.
 export const config = {
-  schedule: "*/1 * * * *"
+  schedule: "0 7,19 * * *"
 };
 
 const MAX_PLAYLISTS_PER_USER = 5;
@@ -35,6 +34,10 @@ export const handler = (async (
   for (const user of users) {
     if (!user.tokens) {
       console.warn("[cron] skipping user without tokens", user.id);
+      continue;
+    }
+    if (user.reauthRequired) {
+      console.warn("[cron] skipping user pending reauth", user.id);
       continue;
     }
     // Liked scan (light: single page to reduce API load)

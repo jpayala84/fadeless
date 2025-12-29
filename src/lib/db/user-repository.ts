@@ -83,6 +83,24 @@ export const deleteTokens = async (userId: string) => {
   await prisma.token.deleteMany({ where: { userId } });
 };
 
+export const setReauthRequired = async (
+  userId: string,
+  reauthRequired: boolean
+) => {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { reauthRequired }
+    });
+  } catch (error) {
+    console.error('[UserRepository] Failed to update reauth flag', {
+      userId,
+      reauthRequired,
+      error
+    });
+  }
+};
+
 export const createSession = async ({
   userId,
   ttlHours

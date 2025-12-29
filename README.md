@@ -99,6 +99,8 @@ Create `.env.local` with:
 | `ENCRYPTION_SECRET` | 32+ byte secret for AES-GCM token encryption |
 | `SESSION_SECRET` | 32+ byte secret for signing session cookies |
 | `NEXT_PUBLIC_APP_URL` | Public base URL (e.g., `http://localhost:3000`) |
+| `RESEND_API_KEY` | (Optional) Resend API key for weekly digest emails |
+| `EMAIL_FROM` | Verified sender address for digests (e.g., `alerts@yourdomain.com`) |
 
 ---
 
@@ -132,4 +134,4 @@ Tokens are encrypted at rest via AES-256-GCM (see `src/lib/security/encryption.t
 
 ## Notifications
 
-Users can configure weekly summaries (email or in-app) from the dashboard. Preferences are stored in `NotificationPreference`. Wiring an email provider is still TODO; summaries can be triggered via future background jobs that read removal events within the last 7 days.
+Users can configure weekly summaries (email or in-app) from the dashboard. Preferences are stored in `NotificationPreference`. Email delivery uses Resend via the `POST /api/jobs/send-weekly-digest` route, which is triggered every Monday by `.github/workflows/weekly-digest.yml`. Summaries include the last 7 days of `RemovalEvent` entries, and we skip users who need to re-authenticate.

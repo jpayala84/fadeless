@@ -20,7 +20,9 @@ const serverSchema = z
     DATABASE_URL: z.string().url(),
     ENCRYPTION_SECRET: z.string().min(32),
     SESSION_SECRET: z.string().min(32),
-    NEXT_PUBLIC_APP_URL: z.string().url()
+    NEXT_PUBLIC_APP_URL: z.string().url(),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    EMAIL_FROM: z.string().email().optional()
   })
   .passthrough();
 
@@ -38,7 +40,9 @@ const devFallbacks = {
   DATABASE_URL: 'postgresql://stub:stub@localhost:5432/spotrack',
   ENCRYPTION_SECRET: '0123456789abcdef0123456789abcdef',
   SESSION_SECRET: 'fedcba9876543210fedcba9876543210',
-  NEXT_PUBLIC_APP_URL: 'http://localhost:3000'
+  NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+  RESEND_API_KEY: 'resend-test-key',
+  EMAIL_FROM: 'alerts@example.com'
 } as const;
 
 const PLACEHOLDER_VALUES = new Set([

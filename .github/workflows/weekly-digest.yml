@@ -1,0 +1,17 @@
+name: Weekly Digest Emails
+
+on:
+  schedule:
+    - cron: "0 13 * * 1" # Mondays at 13:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  trigger-weekly-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger digest job
+        env:
+          DIGEST_ENDPOINT: https://lostrack.netlify.app/api/jobs/send-weekly-digest
+        run: |
+          echo "Triggering weekly digest at $DIGEST_ENDPOINT"
+          curl -s -X POST "$DIGEST_ENDPOINT"

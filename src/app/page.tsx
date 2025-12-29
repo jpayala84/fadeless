@@ -13,6 +13,7 @@ import { TrackTable } from "@/components/track-table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LikedBaselineBanner } from "@/components/liked-baseline-banner";
 import { PlaylistOnboardingDialog } from "@/components/playlist-onboarding-dialog";
+import { ReauthBanner } from "@/components/reauth-banner";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   listRemovalEvents,
@@ -346,6 +347,11 @@ const HomePage = async ({ searchParams }: PageProps) => {
         open={needsOnboarding}
       />
       <DashboardHeader user={user} view={view} />
+      {user.reauthRequired ? (
+        <div className="px-6 pt-6">
+          <ReauthBanner />
+        </div>
+      ) : null}
       <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">
         <section className="space-y-6">
           {trackTableData ? (
