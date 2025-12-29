@@ -1,4 +1,8 @@
-import type { Handler, HandlerResponse } from "@netlify/functions";
+import type {
+  HandlerContext,
+  HandlerEvent,
+  HandlerResponse
+} from "@netlify/functions";
 
 import { prisma } from "../../src/lib/db/client";
 import { createRemovalEventRepository } from "../../src/lib/db/removal-repository";
@@ -13,7 +17,10 @@ export const config = {
 
 const MAX_PLAYLISTS_PER_USER = 5;
 
-export const handler: Handler = async (_event, _context): Promise<HandlerResponse> => {
+export const handler = async (
+  _event: HandlerEvent,
+  _context: HandlerContext
+): Promise<HandlerResponse> => {
   console.info("[cron] starting run", new Date().toISOString());
   const users = await prisma.user.findMany({
     include: {
