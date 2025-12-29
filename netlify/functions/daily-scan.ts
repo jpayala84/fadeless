@@ -1,11 +1,10 @@
-import type { Handler } from "@netlify/functions";
+import type { Handler, HandlerContext, HandlerEvent } from "@netlify/functions";
 
 import { prisma } from "../../src/lib/db/client";
 import { createRemovalEventRepository } from "../../src/lib/db/removal-repository";
 import { createSnapshotRepository } from "../../src/lib/db/snapshot-repository";
 import { runDailyScan } from "../../src/lib/jobs/daily-scan";
 import { getSpotifyClient, withAccessToken } from "../../src/lib/spotify/service";
-import type { HandlerEvent, HandlerContext } from "@netlify/functions";
 
 // Every minute for testing. Change to "@daily" (or "0 7 * * *") after verification.
 export const config = {
@@ -55,7 +54,6 @@ export const handler = (async (
           { type: "liked" }
         )
       );
-      );
       console.info("[cron] liked scan complete", user.id);
     } catch (error) {
       console.error("[cron-liked-scan]", user.id, error);
@@ -78,7 +76,6 @@ export const handler = (async (
             },
             { type: "playlist", playlistId: playlist.playlistId, playlistName: playlist.playlistName }
           )
-        );
         );
         console.info("[cron] playlist scan complete", user.id, playlist.playlistId);
       } catch (error) {
