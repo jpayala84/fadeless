@@ -13,6 +13,7 @@ import { TrackTable } from "@/components/track-table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LikedBaselineBanner } from "@/components/liked-baseline-banner";
 import { PlaylistOnboardingDialog } from "@/components/playlist-onboarding-dialog";
+import { InAppDigestBanner } from "@/components/in-app-digest-banner";
 import { ReauthBanner } from "@/components/reauth-banner";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import {
@@ -340,6 +341,17 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const showLikedBaseline =
     view !== "settings" && !trackTableData && (likedBaseline ? !likedBaseline.completed : likedSnapshotCount === 0);
 
+  const lastNotifiedAt = user.notificationLastNotifiedAt;
+  const unreadInAppEvents =
+    user.notificationsEnabled && user.notificationChannel === "IN_APP"
+      ? weekly.filter((event) => {
+          if (!lastNotifiedAt) {
+            return true;
+          }
+          return event.removedAt.getTime() > lastNotifiedAt.getTime();
+        })
+      : [];
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <PlaylistOnboardingDialog
@@ -376,6 +388,21 @@ const HomePage = async ({ searchParams }: PageProps) => {
                   totalCount={library.likedSongsCount}
                   initialIndexedCount={likedBaseline?.indexedCount ?? 0}
                   initiallyCompleted={likedBaseline?.completed ?? false}
+                />
+              ) : null}
+              {unreadInAppEvents.length ? (
+                <InAppDigestBanner
+                  totalCount={unreadInAppEvents.length}
+                  events={unreadInAppEvents.slice(0, 4).map((event) => ({
+                    id: event.id,
+                    trackName: event.trackName,
+                    artists: event.artists.join(", "),
+                    playlistNames:
+                      event.playlistNames.length > 0
+                        ? event.playlistNames
+                        : ["Liked Songs"],
+                    removedAt: event.removedAt.toLocaleDateString()
+                  }))}
                 />
               ) : null}
               {view !== "settings" ? (

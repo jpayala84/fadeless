@@ -29,8 +29,7 @@ export const updateNotificationPreference = async (
   }
 
   const channel: NotificationChannel = channelValue;
-  const enabledValue = formData.get('enabled');
-  const enabled = enabledValue === 'true';
+  const enabled = formData.get('enabled') !== null;
 
   try {
     await prisma.notificationPreference.upsert({

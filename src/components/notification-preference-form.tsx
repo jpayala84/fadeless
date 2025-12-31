@@ -58,14 +58,8 @@ export const NotificationPreferenceForm = ({
       </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm text-muted-foreground">
-        <input type="hidden" value="false" name="enabled" />
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="enabled"
-            value="true"
-            defaultChecked={enabled}
-          />
+          <input type="checkbox" name="enabled" defaultChecked={enabled} />
           Enable weekly summary
         </label>
         <p className="text-xs">

@@ -10,6 +10,7 @@ const serverSchema = z
       .min(1)
       .default(
         [
+          'user-read-email',
           'user-library-read',
           'playlist-read-private',
           'playlist-read-collaborative',
@@ -31,6 +32,7 @@ const devFallbacks = {
   SPOTIFY_CLIENT_SECRET: 'stub-client-secret',
   SPOTIFY_REDIRECT_URI: 'http://localhost:3000/api/auth/callback',
   SPOTIFY_SCOPES: [
+    'user-read-email',
     'user-library-read',
     'playlist-read-private',
     'playlist-read-collaborative',

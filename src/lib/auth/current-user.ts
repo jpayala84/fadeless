@@ -9,6 +9,7 @@ export type CurrentUser = {
   avatarUrl: string | null;
   notificationChannel: NotificationChannel | null;
   notificationsEnabled: boolean;
+  notificationLastNotifiedAt: Date | null;
   reauthRequired: boolean;
 };
 
@@ -36,6 +37,7 @@ export const getCurrentUser = async (): Promise<CurrentUser | null> => {
     avatarUrl: user.avatarUrl,
     notificationChannel: user.notification?.channel ?? null,
     notificationsEnabled: user.notification?.enabled ?? false,
+    notificationLastNotifiedAt: user.notification?.lastNotifiedAt ?? null,
     reauthRequired: user.reauthRequired
   };
 };

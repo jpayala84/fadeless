@@ -95,7 +95,7 @@ Create `.env.local` with:
 | `DATABASE_URL` | PostgreSQL connection string |
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | Spotify app credentials |
 | `SPOTIFY_REDIRECT_URI` | Must match your Spotify app callback (e.g., `http://localhost:3000/api/auth/callback`) |
-| `SPOTIFY_SCOPES` | Optional override (defaults to read-only playlist/library scopes plus `user-top-read user-read-recently-played`) |
+| `SPOTIFY_SCOPES` | Optional override (defaults now include `user-read-email` plus read-only library/playlist scopes) |
 | `ENCRYPTION_SECRET` | 32+ byte secret for AES-GCM token encryption |
 | `SESSION_SECRET` | 32+ byte secret for signing session cookies |
 | `NEXT_PUBLIC_APP_URL` | Public base URL (e.g., `http://localhost:3000`) |
@@ -134,4 +134,4 @@ Tokens are encrypted at rest via AES-256-GCM (see `src/lib/security/encryption.t
 
 ## Notifications
 
-Users can configure weekly summaries (email or in-app) from the dashboard. Preferences are stored in `NotificationPreference`. Email delivery uses Resend via the `POST /api/jobs/send-weekly-digest` route, which is triggered every Monday by `.github/workflows/weekly-digest.yml`. Summaries include the last 7 days of `RemovalEvent` entries, and we skip users who need to re-authenticate.
+Users can configure weekly summaries (email or in-app) from the dashboard. Preferences are stored in `NotificationPreference`. Email delivery uses Resend via the `POST /api/jobs/send-weekly-digest` route (triggered every Monday by `.github/workflows/weekly-digest.yml`). If a user opts into in-app notifications, new removals appear in the dashboard banner until they mark the digest as read. Because `user-read-email` is part of the default Spotify scopes, users will be asked to grant access to their verified address the next time they log in.
