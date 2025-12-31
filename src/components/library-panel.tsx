@@ -350,45 +350,28 @@ export const LibraryPanel = ({
 
       {activePanel === "playlists" ? (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
             <button
               type="button"
-              onClick={scanAllTracked}
-              disabled={!trackedPlaylists.length || pendingScanAll}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs transition",
-                trackedPlaylists.length
-                  ? "border-border/40 text-muted-foreground hover:text-foreground"
-                  : "border-border/20 opacity-40 cursor-not-allowed",
-                pendingScanAll ? "opacity-60 cursor-not-allowed" : ""
-              )}
-              aria-label="Scan all tracked playlists"
+              onClick={() => changePage(currentPage - 1)}
+              disabled={currentPage === 0}
+              className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
+              aria-label="Previous playlists"
             >
-              Scan tracked
+              ‹
             </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => changePage(currentPage - 1)}
-                disabled={currentPage === 0}
-                className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
-                aria-label="Previous playlists"
-              >
-                ‹
-              </button>
-              <span>
-                {currentPage + 1}/{totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => changePage(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1}
-                className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
-                aria-label="Next playlists"
-              >
-                ›
-              </button>
-            </div>
+            <span>
+              {currentPage + 1}/{totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => changePage(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
+              aria-label="Next playlists"
+            >
+              ›
+            </button>
           </div>
           <ul className="space-y-3">
             {visiblePlaylists.map((playlist) => {
