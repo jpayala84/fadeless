@@ -301,12 +301,20 @@ export const LibraryPanel = ({
         onClick={() => viewCollection("liked")}
         onKeyDown={(event) => handleKeyActivate(event, () => viewCollection("liked"))}
         className={cn(
-          "w-full rounded-3xl border border-border/40 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
+          "relative w-full rounded-3xl border border-border/40 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
           activeCollection?.type === "liked"
             ? "border-emerald-400/50 bg-emerald-400/10"
             : ""
         )}
       >
+        {likedBadgeCountState > 0 ? (
+          <span
+            className="absolute -top-2 -left-2 rounded-md px-2 py-0.5 text-xs font-semibold text-slate-900"
+            style={{ backgroundColor: "#CFDB00" }}
+          >
+            {likedBadgeCountState > 99 ? "99+" : likedBadgeCountState}
+          </span>
+        ) : null}
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-emerald-300">
@@ -316,11 +324,6 @@ export const LibraryPanel = ({
               {likedSongsCount.toLocaleString()}
             </p>
           </div>
-          {likedBadgeCountState > 0 ? (
-            <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-              {likedBadgeCountState > 99 ? "99+" : likedBadgeCountState}
-            </span>
-          ) : null}
           <div onClick={(event) => event.stopPropagation()}>
             <RunScanForm mode="liked" showStatus={false} />
           </div>
@@ -398,13 +401,21 @@ export const LibraryPanel = ({
                 <li
                   key={playlist.id}
                   className={cn(
-                    "cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
+                    "relative cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
                     isActive
                       ? "border-emerald-400/50 bg-emerald-400/10"
                       : "border-border/40 bg-card/30 hover:border-emerald-300/40"
                   )}
                   onClick={() => handlePlaylistFocus(playlist.id, playlist.name)}
                 >
+                  {badgeCount > 0 ? (
+                    <span
+                      className="absolute -top-2 -left-2 rounded-md px-2 py-0.5 text-xs font-semibold text-slate-900"
+                      style={{ backgroundColor: "#CFDB00" }}
+                    >
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
+                  ) : null}
                   <div className="flex items-center gap-3">
                     {playlist.imageUrl ? (
                       <Image
@@ -435,11 +446,6 @@ export const LibraryPanel = ({
                           {isTracked ? "Tracking enabled" : "Playlist not tracked"}
                         </p>
                       </div>
-                      {badgeCount > 0 ? (
-                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-                          {badgeCount > 99 ? "99+" : badgeCount}
-                        </span>
-                      ) : null}
                       <div
                         className="flex items-center gap-2"
                         onClick={(event) => event.stopPropagation()}

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { getCurrentUser } from '@/lib/auth/current-user';
+import { prisma } from '@/lib/db/client';
 import { createRemovalEventRepository } from '@/lib/db/removal-repository';
 import { createSnapshotRepository } from '@/lib/db/snapshot-repository';
 import { runDailyScan } from '@/lib/jobs/daily-scan';
@@ -58,6 +59,13 @@ export const runScanAction = async (
           : { type: 'liked' }
       )
     );
+
+    if (user.notificationsEnabled && user.notificationChannel === 'IN_APP') {
+      await prisma.notificationPreference.updateMany({
+        where: { userId: user.id },
+        data: { lastNotifiedAt: new Date() }
+      });
+    }
 
     revalidatePath('/', 'page');
     return {
