@@ -10,6 +10,7 @@ export const mockWeeklyRemovals: DemoRemoval[] = [
     artists: ['Maggie Rogers'],
     albumName: 'Notes from the Archive',
     playlistNames: ['Coding Flow', 'Sunday Reset'],
+    playlistIds: ['demo-coding-flow', 'demo-sunday-reset'],
     removedAt: new Date('2024-07-15'),
     replacementTrackId: null,
     replacementTrackName: null
@@ -21,6 +22,7 @@ export const mockWeeklyRemovals: DemoRemoval[] = [
     artists: ['Sharon Van Etten'],
     albumName: 'Are We There (Deluxe)',
     playlistNames: ['Roadtrip 2022'],
+    playlistIds: ['demo-roadtrip-2022'],
     removedAt: new Date('2024-07-17'),
     replacementTrackId: '6gU1kf4ZOOGc4Sztkekn3n',
     replacementTrackName: 'Seventeen (Remastered)'
@@ -32,6 +34,7 @@ export const mockWeeklyRemovals: DemoRemoval[] = [
     artists: ['Kacey Musgraves'],
     albumName: 'Live Sessions',
     playlistNames: ['Curatorial Mix'],
+    playlistIds: ['demo-curatorial-mix'],
     removedAt: new Date('2024-07-18'),
     replacementTrackId: null,
     replacementTrackName: null
@@ -47,6 +50,7 @@ export const mockAllRemovals: DemoRemoval[] = [
     artists: ['Gerry Rafferty'],
     albumName: 'City to City (2011 Remaster)',
     playlistNames: ['Vinyl Nights'],
+    playlistIds: ['demo-vinyl-nights'],
     removedAt: new Date('2024-06-22'),
     replacementTrackId: null,
     replacementTrackName: null
@@ -58,6 +62,7 @@ export const mockAllRemovals: DemoRemoval[] = [
     artists: ['King Harvest'],
     albumName: 'Dancing in the Moonlight (Single)',
     playlistNames: ['Summer Forever', 'Cabin Campfire'],
+    playlistIds: ['demo-summer-forever', 'demo-cabin-campfire'],
     removedAt: new Date('2024-05-30'),
     replacementTrackId: '11Fv1B8Z6xkIkd3lhcXQxo',
     replacementTrackName: 'Dancing in the Moonlight (2024 Mix)'
