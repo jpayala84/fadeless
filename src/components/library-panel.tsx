@@ -30,6 +30,7 @@ type Props = {
   monitoredPlaylists?: Record<string, boolean>;
   playlistBadgeCounts?: Record<string, number>;
   likedBadgeCount?: number;
+  badgePollingEnabled?: boolean;
   activeCollection?: {
     type?: "playlist" | "liked" | "album";
     id?: string;
@@ -58,6 +59,7 @@ export const LibraryPanel = ({
   monitoredPlaylists = {},
   playlistBadgeCounts = {},
   likedBadgeCount = 0,
+  badgePollingEnabled = false,
   activeCollection,
   page = 0
 }: Props) => {
@@ -83,6 +85,10 @@ export const LibraryPanel = ({
   );
   const [pendingMonitor, startMonitorTransition] = useTransition();
   const [pendingScanAll, startScanAllTransition] = useTransition();
+  const [badgeCountsState, setBadgeCountsState] = useState<Record<string, number>>(
+    () => ({ ...playlistBadgeCounts })
+  );
+  const [likedBadgeCountState, setLikedBadgeCountState] = useState(likedBadgeCount);
 
   useEffect(() => {
     setCurrentPage(clampPage(page, totalPages));
@@ -91,6 +97,66 @@ export const LibraryPanel = ({
   useEffect(() => {
     setPlaylistTracks(playlistPreview.slice());
   }, [playlistPreview]);
+
+  useEffect(() => {
+    setBadgeCountsState({ ...playlistBadgeCounts });
+  }, [playlistBadgeCounts]);
+
+  useEffect(() => {
+    setLikedBadgeCountState(likedBadgeCount);
+  }, [likedBadgeCount]);
+
+  useEffect(() => {
+    if (!badgePollingEnabled) {
+      return;
+    }
+
+    let canceled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    const poll = async () => {
+      try {
+        const response = await fetch("/api/notifications/badges", {
+          cache: "no-store"
+        });
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as
+          | {
+              ok: true;
+              enabled: true;
+              likedBadgeCount: number;
+              playlistBadgeCounts: Record<string, number>;
+            }
+          | {
+              ok: true;
+              enabled: false;
+              likedBadgeCount: number;
+              playlistBadgeCounts: Record<string, number>;
+            };
+
+        if (canceled || !payload.ok) {
+          return;
+        }
+
+        setLikedBadgeCountState(payload.likedBadgeCount);
+        setBadgeCountsState(payload.playlistBadgeCounts);
+      } catch {
+        // ignore
+      }
+    };
+
+    poll();
+    interval = setInterval(poll, 15000);
+
+    return () => {
+      canceled = true;
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [badgePollingEnabled]);
 
   const updateRoute = (
     overrides: Record<string, string | number | undefined>,
@@ -250,9 +316,9 @@ export const LibraryPanel = ({
               {likedSongsCount.toLocaleString()}
             </p>
           </div>
-          {likedBadgeCount > 0 ? (
+          {likedBadgeCountState > 0 ? (
             <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-              {likedBadgeCount > 99 ? "99+" : likedBadgeCount}
+              {likedBadgeCountState > 99 ? "99+" : likedBadgeCountState}
             </span>
           ) : null}
           <div onClick={(event) => event.stopPropagation()}>
@@ -327,7 +393,7 @@ export const LibraryPanel = ({
                 activeCollection?.type === "playlist" &&
                 activeCollection.id === playlist.id;
               const isTracked = monitoredPlaylists[playlist.id] ?? false;
-              const badgeCount = playlistBadgeCounts[playlist.id] ?? 0;
+              const badgeCount = badgeCountsState[playlist.id] ?? 0;
               return (
                 <li
                   key={playlist.id}

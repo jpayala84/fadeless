@@ -500,6 +500,9 @@ const HomePage = async ({ searchParams }: PageProps) => {
               monitoredPlaylists={monitoredPlaylists}
               playlistBadgeCounts={playlistBadgeCounts}
               likedBadgeCount={likedBadgeCount}
+              badgePollingEnabled={
+                user.notificationsEnabled && user.notificationChannel === "IN_APP"
+              }
               activeCollection={{ type: collectionType, id: collectionId }}
               page={playlistPage}
             />
