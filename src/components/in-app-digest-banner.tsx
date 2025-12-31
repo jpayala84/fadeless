@@ -39,7 +39,11 @@ export const InAppDigestBanner = ({ events, totalCount }: Props) => {
           size="sm"
           variant="secondary"
           disabled={pending}
-          onClick={() => startTransition(() => acknowledgeInAppDigest())}
+          onClick={() =>
+            startTransition(async () => {
+              await acknowledgeInAppDigest();
+            })
+          }
         >
           {pending ? "Clearing…" : "Mark as read"}
         </Button>
