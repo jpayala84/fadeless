@@ -32,6 +32,7 @@ export type RemovalEventDTO = {
   artists: string[];
   albumName: string;
   playlistNames: string[];
+  playlistIds: string[];
   removedAt: Date;
   replacementTrackId?: string | null;
   replacementTrackName?: string | null;
@@ -46,6 +47,7 @@ const mapEvent = (event: RemovalEvent): RemovalEventDTO => {
     artists: event.artists.split(',').map((artist) => artist.trim()),
     albumName: event.albumName,
     playlistNames: event.playlistNames,
+    playlistIds: event.playlistIds,
     removedAt: event.removedAt,
     replacementTrackId: event.replacementTrackId,
     replacementTrackName: event.replacementTrackName

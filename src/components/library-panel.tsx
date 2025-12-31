@@ -28,6 +28,8 @@ type Props = {
   savedAlbums: AlbumSummary[];
   playlistPreview?: PlaylistTrack[];
   monitoredPlaylists?: Record<string, boolean>;
+  playlistBadgeCounts?: Record<string, number>;
+  likedBadgeCount?: number;
   activeCollection?: {
     type?: "playlist" | "liked" | "album";
     id?: string;
@@ -54,6 +56,8 @@ export const LibraryPanel = ({
   savedAlbums,
   playlistPreview = [],
   monitoredPlaylists = {},
+  playlistBadgeCounts = {},
+  likedBadgeCount = 0,
   activeCollection,
   page = 0
 }: Props) => {
@@ -246,6 +250,11 @@ export const LibraryPanel = ({
               {likedSongsCount.toLocaleString()}
             </p>
           </div>
+          {likedBadgeCount > 0 ? (
+            <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+              {likedBadgeCount > 99 ? "99+" : likedBadgeCount}
+            </span>
+          ) : null}
           <div onClick={(event) => event.stopPropagation()}>
             <RunScanForm mode="liked" showStatus={false} />
           </div>
@@ -318,6 +327,7 @@ export const LibraryPanel = ({
                 activeCollection?.type === "playlist" &&
                 activeCollection.id === playlist.id;
               const isTracked = monitoredPlaylists[playlist.id] ?? false;
+              const badgeCount = playlistBadgeCounts[playlist.id] ?? 0;
               return (
                 <li
                   key={playlist.id}
@@ -359,6 +369,11 @@ export const LibraryPanel = ({
                           {isTracked ? "Tracking enabled" : "Playlist not tracked"}
                         </p>
                       </div>
+                      {badgeCount > 0 ? (
+                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      ) : null}
                       <div
                         className="flex items-center gap-2"
                         onClick={(event) => event.stopPropagation()}
