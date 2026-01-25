@@ -1,5 +1,15 @@
 import { prisma } from '@/lib/db/client';
 
+const isUniqueEmailConstraintError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const maybe = error as { code?: unknown; meta?: unknown };
+  if (maybe.code !== 'P2002') return false;
+  const meta = maybe.meta as { target?: unknown } | undefined;
+  const target = meta?.target;
+  if (!Array.isArray(target)) return false;
+  return target.includes('email');
+};
+
 export const upsertUserProfile = async ({
   id,
   email,
@@ -13,22 +23,44 @@ export const upsertUserProfile = async ({
   avatarUrl?: string | null;
   country?: string | null;
 }) => {
-  await prisma.user.upsert({
-    where: { id },
-    update: {
-      email: email ?? undefined,
-      displayName: displayName ?? undefined,
-      avatarUrl: avatarUrl ?? undefined,
-      country: country ?? undefined
-    },
-    create: {
-      id,
-      email,
-      displayName,
-      avatarUrl,
-      country
+  try {
+    await prisma.user.upsert({
+      where: { id },
+      update: {
+        email: email ?? undefined,
+        displayName: displayName ?? undefined,
+        avatarUrl: avatarUrl ?? undefined,
+        country: country ?? undefined
+      },
+      create: {
+        id,
+        email,
+        displayName,
+        avatarUrl,
+        country
+      }
+    });
+  } catch (error) {
+    if (!isUniqueEmailConstraintError(error)) {
+      throw error;
     }
-  });
+
+    await prisma.user.upsert({
+      where: { id },
+      update: {
+        displayName: displayName ?? undefined,
+        avatarUrl: avatarUrl ?? undefined,
+        country: country ?? undefined
+      },
+      create: {
+        id,
+        email: null,
+        displayName,
+        avatarUrl,
+        country
+      }
+    });
+  }
 };
 
 export const storeEncryptedTokens = async ({

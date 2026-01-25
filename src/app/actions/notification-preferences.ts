@@ -4,10 +4,6 @@ import { revalidatePath } from 'next/cache';
 
 import { getCurrentUser } from '@/lib/auth/current-user';
 import { prisma } from '@/lib/db/client';
-import {
-  isNotificationChannel,
-  type NotificationChannel
-} from '@/lib/notifications/channels';
 
 export type NotificationPreferenceState =
   | { status: 'idle' }
@@ -23,24 +19,18 @@ export const updateNotificationPreference = async (
     return { status: 'error', message: 'Please sign in first.' };
   }
 
-  const channelValue = formData.get('channel');
-  if (!isNotificationChannel(channelValue)) {
-    return { status: 'error', message: 'Invalid notification channel.' };
-  }
-
-  const channel: NotificationChannel = channelValue;
   const enabled = formData.get('enabled') !== null;
 
   try {
     await prisma.notificationPreference.upsert({
       where: { userId: user.id },
       update: {
-        channel,
+        channel: 'EMAIL',
         enabled
       },
       create: {
         userId: user.id,
-        channel,
+        channel: 'EMAIL',
         enabled
       }
     });

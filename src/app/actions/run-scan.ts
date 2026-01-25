@@ -60,10 +60,21 @@ export const runScanAction = async (
       )
     );
 
-    if (user.notificationsEnabled && user.notificationChannel === 'IN_APP') {
-      await prisma.notificationPreference.updateMany({
+    if (mode === 'liked') {
+      await prisma.notificationPreference.upsert({
         where: { userId: user.id },
-        data: { lastNotifiedAt: new Date() }
+        update: { lastAcknowledgedAt: new Date() },
+        create: {
+          userId: user.id,
+          channel: 'EMAIL',
+          enabled: false,
+          lastAcknowledgedAt: new Date()
+        }
+      });
+    } else if (mode === 'playlist' && playlistId) {
+      await prisma.monitoredPlaylist.updateMany({
+        where: { userId: user.id, playlistId },
+        data: { lastAcknowledgedAt: new Date() }
       });
     }
 

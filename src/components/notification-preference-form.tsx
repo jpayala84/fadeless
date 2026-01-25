@@ -8,23 +8,15 @@ import {
   updateNotificationPreference,
   type NotificationPreferenceState
 } from "@/app/actions/notification-preferences";
-import type { NotificationChannel } from "@/lib/notifications/channels";
 import { Button } from "@/ui/button";
 
 type Props = {
-  channel: NotificationChannel | null;
   enabled: boolean;
 };
-
-const channelOptions: Array<{ label: string; value: NotificationChannel }> = [
-  { label: "Email summary", value: "EMAIL" },
-  { label: "In-app summary", value: "IN_APP" }
-];
 
 const INITIAL_STATE: NotificationPreferenceState = { status: "idle" };
 
 export const NotificationPreferenceForm = ({
-  channel,
   enabled
 }: Props) => {
   const [state, formAction] = useFormState(
@@ -42,28 +34,13 @@ export const NotificationPreferenceForm = ({
 
   return (
     <form className="space-y-4" action={formAction}>
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Weekly summaries</p>
-        <select
-          name="channel"
-          defaultValue={channel ?? "EMAIL"}
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-        >
-          {channelOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
       <div className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm text-muted-foreground">
         <label className="flex items-center gap-2">
           <input type="checkbox" name="enabled" defaultChecked={enabled} />
-          Enable weekly summary
+          Enable weekly email digest
         </label>
         <p className="text-xs">
-          Summaries include Removed This Week and potential replacements.
+          We’ll email you a summary of songs removed that week.
         </p>
       </div>
 

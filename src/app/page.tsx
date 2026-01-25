@@ -293,17 +293,40 @@ const HomePage = async ({ searchParams }: PageProps) => {
     trackTableData = null;
   }
 
+  const playlistAcknowledgedAt: Record<string, Date> = {};
+  monitoredRows.forEach((row) => {
+    if (row.lastAcknowledgedAt) {
+      playlistAcknowledgedAt[row.playlistId] = row.lastAcknowledgedAt;
+    }
+  });
+
+  const likedAcknowledgedAt = user.notificationLastAcknowledgedAt ?? new Date(0);
+
+  const isAcknowledged = (event: typeof weekly[number]) => {
+    if (!event.playlistIds.length) {
+      return event.removedAt.getTime() <= likedAcknowledgedAt.getTime();
+    }
+    return event.playlistIds.every((id) => {
+      const ack = playlistAcknowledgedAt[id];
+      if (!ack) return false;
+      return event.removedAt.getTime() <= ack.getTime();
+    });
+  };
+
+  const weeklyAcknowledged = weekly.filter(isAcknowledged);
+  const allAcknowledged = all.filter(isAcknowledged);
+
   const now = new Date();
-  const monthlyRemoved = all.filter(
+  const monthlyRemoved = allAcknowledged.filter(
     (event) =>
       event.removedAt.getMonth() === now.getMonth() &&
       event.removedAt.getFullYear() === now.getFullYear()
   ).length;
   const playlistsAffected = new Set(
-    all.flatMap((event) => event.playlistNames ?? [])
+    allAcknowledged.flatMap((event) => event.playlistNames ?? [])
   ).size;
 
-  const hasHistory = all.length > 0;
+  const hasHistory = allAcknowledged.length > 0;
   const weeklyEmptyMessage = hasHistory
     ? "No removals recorded in the last 7 days."
     : "We need a baseline snapshot first. Run a scan to capture your library.";
@@ -315,7 +338,9 @@ const HomePage = async ({ searchParams }: PageProps) => {
     {
       label: "Removed this month",
       value: `${monthlyRemoved} tracks`,
-      helper: weekly.length ? `+${weekly.length} this week` : "Run a scan to begin"
+      helper: weeklyAcknowledged.length
+        ? `+${weeklyAcknowledged.length} this week`
+        : "Run a scan to begin"
     },
     {
       label: "Playlists affected",
@@ -340,26 +365,32 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const showLikedBaseline =
     view !== "settings" && !trackTableData && (likedBaseline ? !likedBaseline.completed : likedSnapshotCount === 0);
 
-  const lastNotifiedAt = user.notificationLastNotifiedAt;
-  const unreadInAppEvents =
-    user.notificationsEnabled && user.notificationChannel === "IN_APP"
-      ? weekly.filter((event) => {
-          if (!lastNotifiedAt) {
-            return true;
-          }
-          return event.removedAt.getTime() > lastNotifiedAt.getTime();
-        })
-      : [];
+  const unreadBadgeEvents = all.filter((event) => {
+    if (!event.playlistIds.length) {
+      return event.removedAt.getTime() > likedAcknowledgedAt.getTime();
+    }
+    return event.playlistIds.some((playlistId) => {
+      const ack = playlistAcknowledgedAt[playlistId];
+      if (!ack) {
+        return true;
+      }
+      return event.removedAt.getTime() > ack.getTime();
+    });
+  });
 
   const playlistBadgeCounts: Record<string, number> = {};
   let likedBadgeCount = 0;
-  unreadInAppEvents.forEach((event) => {
+  unreadBadgeEvents.forEach((event) => {
     if (!event.playlistIds.length) {
       likedBadgeCount += 1;
+      return;
     }
     event.playlistIds.forEach((playlistId) => {
-      playlistBadgeCounts[playlistId] =
-        (playlistBadgeCounts[playlistId] ?? 0) + 1;
+      const ack = playlistAcknowledgedAt[playlistId];
+      if (!ack || event.removedAt.getTime() > ack.getTime()) {
+        playlistBadgeCounts[playlistId] =
+          (playlistBadgeCounts[playlistId] ?? 0) + 1;
+      }
     });
   });
 
@@ -439,7 +470,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
               {view === "weekly" ? (
                 <RemovedList
                   title="Removed This Week"
-                  events={weekly}
+                  events={weeklyAcknowledged}
                   emptyMessage={weeklyEmptyMessage}
                 />
               ) : null}
@@ -447,7 +478,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
               {view === "archive" ? (
                 <RemovedList
                   title="All Removed Songs"
-                  events={all}
+                  events={allAcknowledged}
                   emptyMessage={archiveEmptyMessage}
                 />
               ) : null}
@@ -457,7 +488,6 @@ const HomePage = async ({ searchParams }: PageProps) => {
                   <div className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6">
                     <h2 className="text-xl font-semibold">Notification preferences</h2>
                     <NotificationPreferenceForm
-                      channel={user.notificationChannel}
                       enabled={user.notificationsEnabled}
                     />
                   </div>
@@ -500,9 +530,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
               monitoredPlaylists={monitoredPlaylists}
               playlistBadgeCounts={playlistBadgeCounts}
               likedBadgeCount={likedBadgeCount}
-              badgePollingEnabled={
-                user.notificationsEnabled && user.notificationChannel === "IN_APP"
-              }
+              badgePollingEnabled
               activeCollection={{ type: collectionType, id: collectionId }}
               page={playlistPage}
             />

@@ -9,6 +9,7 @@ yarn-error.log*
 pnpm-debug.log*
 .env.production
 .vercel
+tsconfig.tsbuildinfo
 
 
 # Local Netlify folder

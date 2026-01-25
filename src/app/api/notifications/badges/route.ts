@@ -11,23 +11,22 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
   }
 
-  if (!user.notificationsEnabled || user.notificationChannel !== "IN_APP") {
-    return NextResponse.json({
-      ok: true,
-      enabled: false,
-      likedBadgeCount: 0,
-      playlistBadgeCounts: {}
-    });
-  }
+  // We treat "badges" as "pending review" markers.
+  // - Liked badge counts liked-only removals since the user's last acknowledgement.
+  // - Playlist badges count removals since that playlist was last acknowledged.
+  const likedSince = user.notificationLastAcknowledgedAt ?? new Date(0);
 
-  const since = user.notificationLastNotifiedAt
-    ? user.notificationLastNotifiedAt
-    : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const monitored = await prisma.monitoredPlaylist.findMany({
+    where: { userId: user.id, enabled: true },
+    select: { playlistId: true, lastAcknowledgedAt: true }
+  });
+  const playlistSince = new Map(
+    monitored.map((row) => [row.playlistId, row.lastAcknowledgedAt ?? new Date(0)] as const)
+  );
 
   const events = await prisma.removalEvent.findMany({
     where: {
-      userId: user.id,
-      removedAt: { gt: since }
+      userId: user.id
     },
     orderBy: { removedAt: "desc" },
     take: 500
@@ -37,12 +36,22 @@ export async function GET() {
   let likedBadgeCount = 0;
 
   for (const event of events) {
-    if (!event.playlistIds.length) {
+    // Liked-only removals count toward the liked badge if they happened
+    // after the user last acknowledged in-app notifications.
+    if (!event.playlistIds.length && event.removedAt > likedSince) {
       likedBadgeCount += 1;
     }
 
+    // Playlist removals increment the badge for the affected playlists
+    // only if they happened after that playlist was last acknowledged.
     for (const playlistId of event.playlistIds) {
-      playlistBadgeCounts[playlistId] = (playlistBadgeCounts[playlistId] ?? 0) + 1;
+      const since = playlistSince.get(playlistId);
+      if (!since) {
+        continue;
+      }
+      if (event.removedAt > since) {
+        playlistBadgeCounts[playlistId] = (playlistBadgeCounts[playlistId] ?? 0) + 1;
+      }
     }
   }
 
