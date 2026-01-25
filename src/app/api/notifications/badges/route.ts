@@ -20,40 +20,36 @@ export async function GET() {
     where: { userId: user.id, enabled: true },
     select: { playlistId: true, lastAcknowledgedAt: true }
   });
-  const playlistSince = new Map(
-    monitored.map((row) => [row.playlistId, row.lastAcknowledgedAt ?? new Date(0)] as const)
-  );
 
-  const events = await prisma.removalEvent.findMany({
-    where: {
-      userId: user.id
-    },
-    orderBy: { removedAt: "desc" },
-    take: 500
-  });
+  const [likedBadgeCount, playlistCounts] = await Promise.all([
+    prisma.removalEvent.count({
+      where: {
+        userId: user.id,
+        playlistIds: { equals: [] },
+        removedAt: { gt: likedSince }
+      }
+    }),
+    Promise.all(
+      monitored.map(async (row) => {
+        const since = row.lastAcknowledgedAt ?? new Date(0);
+        const count = await prisma.removalEvent.count({
+          where: {
+            userId: user.id,
+            playlistIds: { has: row.playlistId },
+            removedAt: { gt: since }
+          }
+        });
+        return [row.playlistId, count] as const;
+      })
+    )
+  ]);
 
   const playlistBadgeCounts: Record<string, number> = {};
-  let likedBadgeCount = 0;
-
-  for (const event of events) {
-    // Liked-only removals count toward the liked badge if they happened
-    // after the user last acknowledged in-app notifications.
-    if (!event.playlistIds.length && event.removedAt > likedSince) {
-      likedBadgeCount += 1;
+  playlistCounts.forEach(([playlistId, count]) => {
+    if (count > 0) {
+      playlistBadgeCounts[playlistId] = count;
     }
-
-    // Playlist removals increment the badge for the affected playlists
-    // only if they happened after that playlist was last acknowledged.
-    for (const playlistId of event.playlistIds) {
-      const since = playlistSince.get(playlistId);
-      if (!since) {
-        continue;
-      }
-      if (event.removedAt > since) {
-        playlistBadgeCounts[playlistId] = (playlistBadgeCounts[playlistId] ?? 0) + 1;
-      }
-    }
-  }
+  });
 
   return NextResponse.json({
     ok: true,

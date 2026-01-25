@@ -85,23 +85,52 @@ const HomePage = async ({ searchParams }: PageProps) => {
     }),
     getLibraryOverview(user.id)
   ]);
-  const [weeklyDecorated, allDecorated] = await Promise.all([
+  const [weeklyDecorated, allDecorated, monitoredRows] = await Promise.all([
     attachRemovalArtwork(user.id, weeklyRaw),
-    attachRemovalArtwork(user.id, allRaw)
+    attachRemovalArtwork(user.id, allRaw),
+    prisma.monitoredPlaylist.findMany({
+      where: { userId: user.id }
+    })
   ]);
 
-  const groupRemovalEvents = (
-    events: typeof weeklyDecorated
-  ): typeof weeklyDecorated => {
+  const monitoredPlaylists: Record<string, boolean> = {};
+  monitoredRows.forEach((row) => {
+    monitoredPlaylists[row.playlistId] = row.enabled;
+  });
+  const monitoredTargets = monitoredRows
+    .filter((row) => row.enabled)
+    .map((row) => ({ id: row.playlistId, name: row.playlistName }));
+  const needsOnboarding = monitoredTargets.length === 0;
+
+  const playlistAcknowledgedAt: Record<string, Date> = {};
+  monitoredRows.forEach((row) => {
+    if (row.lastAcknowledgedAt) {
+      playlistAcknowledgedAt[row.playlistId] = row.lastAcknowledgedAt;
+    }
+  });
+
+  const likedAcknowledgedAt = user.notificationLastAcknowledgedAt ?? new Date(0);
+
+  const isRevealed = (event: typeof weeklyDecorated[number]) => {
+    if (!event.playlistIds.length) {
+      return event.removedAt.getTime() <= likedAcknowledgedAt.getTime();
+    }
+    return event.playlistIds.every((id) => {
+      const ack = playlistAcknowledgedAt[id];
+      if (!ack) return false;
+      return event.removedAt.getTime() <= ack.getTime();
+    });
+  };
+
+  const groupRemovalEvents = (events: typeof weeklyDecorated) => {
     const map = new Map<string, (typeof weeklyDecorated)[number]>();
     events.forEach((event) => {
       const key = event.trackId
         ? `${event.trackId}-${event.removedAt.toISOString().slice(0, 10)}`
         : `${event.trackName}-${event.removedAt.toISOString()}`;
-      const playlistSources =
-        event.playlistNames.length > 0
-          ? event.playlistNames
-          : ["Liked Songs"];
+      const playlistSources = event.playlistIds.length
+        ? event.playlistNames
+        : ["Liked Songs"];
       const existing = map.get(key);
       if (!existing) {
         map.set(key, {
@@ -129,20 +158,11 @@ const HomePage = async ({ searchParams }: PageProps) => {
     );
   };
 
-  const weekly = groupRemovalEvents(weeklyDecorated);
-  const all = groupRemovalEvents(allDecorated);
+  const weeklyRevealed = weeklyDecorated.filter(isRevealed);
+  const allRevealed = allDecorated.filter(isRevealed);
 
-  const monitoredRows = await prisma.monitoredPlaylist.findMany({
-    where: { userId: user.id }
-  });
-  const monitoredPlaylists: Record<string, boolean> = {};
-  monitoredRows.forEach((row) => {
-    monitoredPlaylists[row.playlistId] = row.enabled;
-  });
-  const monitoredTargets = monitoredRows
-    .filter((row) => row.enabled)
-    .map((row) => ({ id: row.playlistId, name: row.playlistName }));
-  const needsOnboarding = monitoredTargets.length === 0;
+  const weekly = groupRemovalEvents(weeklyRevealed);
+  const all = groupRemovalEvents(allRevealed);
 
   const client = getSpotifyClient();
   const mapToRows = (tracks: SpotifyTrack[]) =>
@@ -293,28 +313,8 @@ const HomePage = async ({ searchParams }: PageProps) => {
     trackTableData = null;
   }
 
-  const playlistAcknowledgedAt: Record<string, Date> = {};
-  monitoredRows.forEach((row) => {
-    if (row.lastAcknowledgedAt) {
-      playlistAcknowledgedAt[row.playlistId] = row.lastAcknowledgedAt;
-    }
-  });
-
-  const likedAcknowledgedAt = user.notificationLastAcknowledgedAt ?? new Date(0);
-
-  const isAcknowledged = (event: typeof weekly[number]) => {
-    if (!event.playlistIds.length) {
-      return event.removedAt.getTime() <= likedAcknowledgedAt.getTime();
-    }
-    return event.playlistIds.every((id) => {
-      const ack = playlistAcknowledgedAt[id];
-      if (!ack) return false;
-      return event.removedAt.getTime() <= ack.getTime();
-    });
-  };
-
-  const weeklyAcknowledged = weekly.filter(isAcknowledged);
-  const allAcknowledged = all.filter(isAcknowledged);
+  const weeklyAcknowledged = weekly;
+  const allAcknowledged = all;
 
   const now = new Date();
   const monthlyRemoved = allAcknowledged.filter(
@@ -322,9 +322,28 @@ const HomePage = async ({ searchParams }: PageProps) => {
       event.removedAt.getMonth() === now.getMonth() &&
       event.removedAt.getFullYear() === now.getFullYear()
   ).length;
-  const playlistsAffected = new Set(
-    allAcknowledged.flatMap((event) => event.playlistNames ?? [])
-  ).size;
+  const trackedPlaylistNameById = new Map(
+    monitoredRows
+      .filter((row) => row.enabled)
+      .map((row) => [row.playlistId, row.playlistName] as const)
+  );
+  const playlistLastRemovedAt = new Map<string, Date>();
+  allRevealed.forEach((event) => {
+    event.playlistIds.forEach((id) => {
+      if (!trackedPlaylistNameById.has(id)) return;
+      const current = playlistLastRemovedAt.get(id);
+      if (!current || event.removedAt > current) {
+        playlistLastRemovedAt.set(id, event.removedAt);
+      }
+    });
+  });
+  const affectedPlaylistIds = Array.from(playlistLastRemovedAt.entries())
+    .sort((a, b) => b[1].getTime() - a[1].getTime())
+    .map(([id]) => id);
+  const affectedPlaylistNames = affectedPlaylistIds
+    .map((id) => trackedPlaylistNameById.get(id))
+    .filter(Boolean) as string[];
+  const playlistsAffected = affectedPlaylistNames.length;
 
   const hasHistory = allAcknowledged.length > 0;
   const weeklyEmptyMessage = hasHistory
@@ -346,8 +365,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
       label: "Playlists affected",
       value: `${playlistsAffected} playlists`,
       helper:
-        library.playlists.slice(0, 3).map((playlist) => playlist.name).join(", ") ||
-        "Scans populate playlist impact."
+        affectedPlaylistNames.join(", ") || "No tracked playlist removals yet."
     }
   ];
 
@@ -365,33 +383,36 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const showLikedBaseline =
     view !== "settings" && !trackTableData && (likedBaseline ? !likedBaseline.completed : likedSnapshotCount === 0);
 
-  const unreadBadgeEvents = all.filter((event) => {
-    if (!event.playlistIds.length) {
-      return event.removedAt.getTime() > likedAcknowledgedAt.getTime();
-    }
-    return event.playlistIds.some((playlistId) => {
-      const ack = playlistAcknowledgedAt[playlistId];
-      if (!ack) {
-        return true;
+  const [likedBadgeCount, playlistCounts] = await Promise.all([
+    prisma.removalEvent.count({
+      where: {
+        userId: user.id,
+        playlistIds: { equals: [] },
+        removedAt: { gt: likedAcknowledgedAt }
       }
-      return event.removedAt.getTime() > ack.getTime();
-    });
-  });
+    }),
+    Promise.all(
+      monitoredRows
+        .filter((row) => row.enabled)
+        .map(async (row) => {
+          const since = row.lastAcknowledgedAt ?? new Date(0);
+          const count = await prisma.removalEvent.count({
+            where: {
+              userId: user.id,
+              playlistIds: { has: row.playlistId },
+              removedAt: { gt: since }
+            }
+          });
+          return [row.playlistId, count] as const;
+        })
+    )
+  ]);
 
   const playlistBadgeCounts: Record<string, number> = {};
-  let likedBadgeCount = 0;
-  unreadBadgeEvents.forEach((event) => {
-    if (!event.playlistIds.length) {
-      likedBadgeCount += 1;
-      return;
+  playlistCounts.forEach(([playlistId, count]) => {
+    if (count > 0) {
+      playlistBadgeCounts[playlistId] = count;
     }
-    event.playlistIds.forEach((playlistId) => {
-      const ack = playlistAcknowledgedAt[playlistId];
-      if (!ack || event.removedAt.getTime() > ack.getTime()) {
-        playlistBadgeCounts[playlistId] =
-          (playlistBadgeCounts[playlistId] ?? 0) + 1;
-      }
-    });
   });
 
   return (
