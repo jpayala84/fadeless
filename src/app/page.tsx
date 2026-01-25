@@ -135,13 +135,21 @@ const HomePage = async ({ searchParams }: PageProps) => {
       if (!existing) {
         map.set(key, {
           ...event,
+          playlistIds: event.playlistIds.slice(),
           playlistNames: [...new Set(playlistSources)]
         });
         return;
       }
-      const combined = new Set(existing.playlistNames);
-      playlistSources.forEach((name) => combined.add(name));
-      existing.playlistNames = Array.from(combined);
+      const combinedNames = new Set(existing.playlistNames);
+      playlistSources.forEach((name) => combinedNames.add(name));
+      existing.playlistNames = Array.from(combinedNames);
+
+      if (event.playlistIds.length) {
+        const combinedIds = new Set(existing.playlistIds);
+        event.playlistIds.forEach((id) => combinedIds.add(id));
+        existing.playlistIds = Array.from(combinedIds);
+      }
+
       if (!existing.replacementTrackId && event.replacementTrackId) {
         existing.replacementTrackId = event.replacementTrackId;
         existing.replacementTrackName = event.replacementTrackName;
@@ -153,9 +161,26 @@ const HomePage = async ({ searchParams }: PageProps) => {
         existing.removedAt = event.removedAt;
       }
     });
-    return Array.from(map.values()).sort(
-      (a, b) => b.removedAt.getTime() - a.removedAt.getTime()
-    );
+
+    const revealAtFor = (event: (typeof weeklyDecorated)[number]) => {
+      const times: number[] = [];
+      if (event.playlistNames.includes("Liked Songs")) {
+        times.push(likedAcknowledgedAt.getTime());
+      }
+      event.playlistIds.forEach((playlistId) => {
+        const ack = playlistAcknowledgedAt[playlistId];
+        if (ack) {
+          times.push(ack.getTime());
+        }
+      });
+      return times.length ? Math.max(...times) : event.removedAt.getTime();
+    };
+
+    return Array.from(map.values()).sort((a, b) => {
+      const byReveal = revealAtFor(b) - revealAtFor(a);
+      if (byReveal !== 0) return byReveal;
+      return b.removedAt.getTime() - a.removedAt.getTime();
+    });
   };
 
   const weeklyRevealed = weeklyDecorated.filter(isRevealed);
