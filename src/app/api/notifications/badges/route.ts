@@ -21,35 +21,51 @@ export async function GET() {
     select: { playlistId: true, lastAcknowledgedAt: true }
   });
 
-  const [likedBadgeCount, playlistCounts] = await Promise.all([
-    prisma.removalEvent.count({
-      where: {
-        userId: user.id,
-        playlistIds: { equals: [] },
-        removedAt: { gt: likedSince }
+  const playlistSince = new Map(
+    monitored.map((row) => [row.playlistId, row.lastAcknowledgedAt ?? new Date(0)] as const)
+  );
+  const earliestPlaylistAck = monitored.reduce<Date>(
+    (min, row) => {
+      const value = row.lastAcknowledgedAt ?? new Date(0);
+      return value < min ? value : min;
+    },
+    new Date(8640000000000000)
+  );
+  const earliestSince =
+    monitored.length > 0
+      ? new Date(Math.min(likedSince.getTime(), earliestPlaylistAck.getTime()))
+      : likedSince;
+
+  const events = await prisma.removalEvent.findMany({
+    where: {
+      userId: user.id,
+      removedAt: {
+        gt: earliestSince
       }
-    }),
-    Promise.all(
-      monitored.map(async (row) => {
-        const since = row.lastAcknowledgedAt ?? new Date(0);
-        const count = await prisma.removalEvent.count({
-          where: {
-            userId: user.id,
-            playlistIds: { has: row.playlistId },
-            removedAt: { gt: since }
-          }
-        });
-        return [row.playlistId, count] as const;
-      })
-    )
-  ]);
+    },
+    orderBy: { removedAt: "desc" },
+    take: 2000
+  });
 
   const playlistBadgeCounts: Record<string, number> = {};
-  playlistCounts.forEach(([playlistId, count]) => {
-    if (count > 0) {
-      playlistBadgeCounts[playlistId] = count;
+  let likedBadgeCount = 0;
+
+  for (const event of events) {
+    if (!event.playlistIds.length) {
+      if (event.removedAt > likedSince) {
+        likedBadgeCount += 1;
+      }
+      continue;
     }
-  });
+
+    for (const playlistId of event.playlistIds) {
+      const since = playlistSince.get(playlistId);
+      if (!since) continue;
+      if (event.removedAt > since) {
+        playlistBadgeCounts[playlistId] = (playlistBadgeCounts[playlistId] ?? 0) + 1;
+      }
+    }
+  }
 
   return NextResponse.json({
     ok: true,

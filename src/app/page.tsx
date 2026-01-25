@@ -408,36 +408,26 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const showLikedBaseline =
     view !== "settings" && !trackTableData && (likedBaseline ? !likedBaseline.completed : likedSnapshotCount === 0);
 
-  const [likedBadgeCount, playlistCounts] = await Promise.all([
-    prisma.removalEvent.count({
-      where: {
-        userId: user.id,
-        playlistIds: { equals: [] },
-        removedAt: { gt: likedAcknowledgedAt }
-      }
-    }),
-    Promise.all(
-      monitoredRows
-        .filter((row) => row.enabled)
-        .map(async (row) => {
-          const since = row.lastAcknowledgedAt ?? new Date(0);
-          const count = await prisma.removalEvent.count({
-            where: {
-              userId: user.id,
-              playlistIds: { has: row.playlistId },
-              removedAt: { gt: since }
-            }
-          });
-          return [row.playlistId, count] as const;
-        })
-    )
-  ]);
-
   const playlistBadgeCounts: Record<string, number> = {};
-  playlistCounts.forEach(([playlistId, count]) => {
-    if (count > 0) {
-      playlistBadgeCounts[playlistId] = count;
+  let likedBadgeCount = 0;
+  allDecorated.forEach((event) => {
+    if (!event.playlistIds.length) {
+      if (event.removedAt.getTime() > likedAcknowledgedAt.getTime()) {
+        likedBadgeCount += 1;
+      }
+      return;
     }
+
+    event.playlistIds.forEach((playlistId) => {
+      if (!monitoredPlaylists[playlistId]) {
+        return;
+      }
+      const ack = playlistAcknowledgedAt[playlistId] ?? new Date(0);
+      if (event.removedAt.getTime() > ack.getTime()) {
+        playlistBadgeCounts[playlistId] =
+          (playlistBadgeCounts[playlistId] ?? 0) + 1;
+      }
+    });
   });
 
   return (

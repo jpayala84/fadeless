@@ -19,6 +19,7 @@ const serverSchema = z
         ].join(' ')
       ),
     DATABASE_URL: z.string().url(),
+    DIRECT_URL: z.string().url().optional(),
     ENCRYPTION_SECRET: z.string().min(32),
     SESSION_SECRET: z.string().min(32),
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -40,6 +41,7 @@ const devFallbacks = {
     'user-read-recently-played'
   ].join(' '),
   DATABASE_URL: 'postgresql://stub:stub@localhost:5432/spotrack',
+  DIRECT_URL: 'postgresql://stub:stub@localhost:5432/spotrack',
   ENCRYPTION_SECRET: '0123456789abcdef0123456789abcdef',
   SESSION_SECRET: 'fedcba9876543210fedcba9876543210',
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
