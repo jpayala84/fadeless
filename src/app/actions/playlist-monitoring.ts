@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db/client";
+import { createRemovalEventRepository } from "@/lib/db/removal-repository";
+import { createSnapshotRepository } from "@/lib/db/snapshot-repository";
+import { runDailyScan } from "@/lib/jobs/daily-scan";
+import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
 
 export type ToggleMonitoringResult =
   | { status: "success"; enabled: boolean }
@@ -22,6 +26,15 @@ export const togglePlaylistMonitoring = async ({
   if (!user) {
     return { status: "error", message: "You must sign in first." };
   }
+
+  const existing = await prisma.monitoredPlaylist.findUnique({
+    where: {
+      userId_playlistId: {
+        userId: user.id,
+        playlistId
+      }
+    }
+  });
 
   if (enabled) {
     const enabledCount = await prisma.monitoredPlaylist.count({
@@ -46,13 +59,46 @@ export const togglePlaylistMonitoring = async ({
       userId: user.id,
       playlistId,
       playlistName,
-      enabled
+      enabled,
+      ...(enabled ? { lastAcknowledgedAt: new Date() } : {})
     },
     update: {
       playlistName,
-      enabled
+      enabled,
+      ...(enabled ? { lastAcknowledgedAt: existing?.lastAcknowledgedAt ?? new Date() } : {})
     }
   });
+
+  // When turning tracking ON for the first time (or after it was off),
+  // take a baseline snapshot immediately so future cron runs can detect removals
+  // even if tracks are added/removed before the next scheduled scan.
+  if (enabled && (!existing || !existing.enabled)) {
+    try {
+      const snapshotRepo = createSnapshotRepository();
+      const removalRepo = createRemovalEventRepository();
+      const client = getSpotifyClient();
+      await withAccessToken(user.id, async (accessToken) =>
+        runDailyScan(
+          user.id,
+          {
+            repo: snapshotRepo,
+            removalEvents: removalRepo,
+            spotify: {
+              fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
+              fetchPlaylistTracks: (id, name) =>
+                client.fetchPlaylistTracks(accessToken, id, name)
+            }
+          },
+          { type: "playlist", playlistId, playlistName }
+        )
+      );
+    } catch (error) {
+      console.error(
+        "[PlaylistMonitoring] Baseline scan failed",
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
 
   revalidatePath("/", "page");
   return { status: "success", enabled };
