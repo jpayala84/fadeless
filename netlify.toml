@@ -1,4 +1,3 @@
 [build]
-  command = "npm run prisma:migrate && npm run prisma:generate && npm run build"
+  command = "npm run prisma:generate && npm run build"
   publish = ".next"
-
