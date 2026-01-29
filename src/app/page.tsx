@@ -57,6 +57,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
     playlistBadgeCounts,
     likedBadgeCount,
     showLikedBaseline,
+    likedBaseline,
     isLocalEnv,
     playlistsAffected,
     affectedPlaylistIds,

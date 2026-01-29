@@ -468,6 +468,7 @@ export const loadDashboardData = async (options: {
           lastTrackCount: activeScanHealth.lastTrackCount
         }
       : null,
+    likedBaseline,
     showLikedBaseline,
     isLocalEnv,
     playlistsAffected,
