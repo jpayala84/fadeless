@@ -27,6 +27,7 @@ export type AlbumSummary = {
   id: string;
   name: string;
   artist: string;
+  artistId?: string;
   imageUrl?: string;
 };
 
@@ -341,6 +342,7 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
           id: album.id,
           name: album.name,
           artist: album.artists?.[0]?.name ?? 'Unknown artist',
+          artistId: album.artists?.[0]?.id,
           imageUrl: album.images?.[0]?.url
         };
       }

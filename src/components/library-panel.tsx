@@ -259,7 +259,11 @@ export const LibraryPanel = ({
                 activeCollection?.type === "album" &&
                 activeCollection.id === album.id;
               const albumHref = `https://open.spotify.com/album/${album.id}`;
-              const artistHref = `https://open.spotify.com/artist/${album.artistId}`;
+              const artistHref = album.artistId
+                ? `https://open.spotify.com/artist/${album.artistId}`
+                : `https://open.spotify.com/search/${encodeURIComponent(
+                    album.artist
+                  )}`;
               return (
                 <div
                   key={album.id}
