@@ -372,8 +372,10 @@ export const loadDashboardData = async (options: {
 
   const isLocalEnv =
     process.env.NODE_ENV === "development" ||
-    process.env.NEXT_PUBLIC_APP_URL?.includes("127.0.0.1") ||
-    process.env.NEXT_PUBLIC_APP_URL?.includes("localhost");
+    Boolean(
+      process.env.NEXT_PUBLIC_APP_URL?.includes("127.0.0.1") ||
+        process.env.NEXT_PUBLIC_APP_URL?.includes("localhost")
+    );
 
   const playlistLastRemovedAt = new Map<string, Date>();
   all.forEach((event) => {
