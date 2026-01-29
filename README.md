@@ -1,4 +1,4 @@
-# Spotify Gone Songs
+# Fadeless
 
 A minimal web app that tracks Spotify songs removed or replaced from your playlists or Liked Songs due to reposts, rights changes, or new track IDs.
 

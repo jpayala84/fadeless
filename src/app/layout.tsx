@@ -5,7 +5,7 @@ import { Toaster } from 'sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Spotify Gone Songs',
+  title: 'Fadeless',
   description:
     'Track the songs Spotify silently removes from your playlists and Liked Songs.'
 };

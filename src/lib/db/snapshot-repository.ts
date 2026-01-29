@@ -5,7 +5,7 @@ import type {
   SnapshotRepository,
   SnapshotTarget,
   TrackSnapshot
-} from '@/lib/jobs/daily-scan';
+} from "@/lib/jobs/diff-engine";
 
 const toScopeValue = (target: SnapshotTarget) =>
   target.type === 'liked' ? SnapshotScope.LIKED : SnapshotScope.PLAYLIST;

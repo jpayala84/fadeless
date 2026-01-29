@@ -1,7 +1,7 @@
 import type { RemovalEvent } from '@prisma/client';
 
 import { prisma } from '@/lib/db/client';
-import type { RemovalRecord, RemovalEventRepository } from '@/lib/jobs/daily-scan';
+import type { RemovalEventRepository, RemovalRecord } from "@/lib/jobs/diff-engine";
 
 export const createRemovalEventRepository = (): RemovalEventRepository => ({
   record: async (userId: string, removed: RemovalRecord[]) => {

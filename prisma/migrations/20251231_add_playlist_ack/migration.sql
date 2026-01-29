@@ -1,0 +1,2 @@
+-- Placeholder migration to match an applied migration already in the database.
+-- No-op: schema changes were already applied in production.

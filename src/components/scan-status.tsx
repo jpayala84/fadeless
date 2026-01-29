@@ -1,9 +1,9 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import { useScanStatus } from "@/lib/scan/use-scan-status";
 
 export const ScanStatus = () => {
-  const { pending } = useFormStatus();
+  const { pending } = useScanStatus();
 
   return (
     <div

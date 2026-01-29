@@ -1,26 +1,33 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Settings } from "lucide-react";
+import { ArrowLeft, Home, Settings } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/auth/current-user";
 import { SignOutButton } from "@/components/auth-buttons";
 
 type Props = {
   user: CurrentUser;
-  view: "weekly" | "archive" | "settings";
+  view: "weekly" | "archive" | "playlists" | "settings";
 };
 
 export const DashboardHeader = ({ user, view }: Props) => (
   <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/30 bg-background/40 px-6 py-6 backdrop-blur">
     <div className="space-y-2">
       <p className="text-xs uppercase tracking-[0.4em] text-emerald-300">
-        Spotify Gone Songs
+        Fadeless
       </p>
       <h1 className="text-3xl font-semibold">
         Welcome back{user.displayName ? `, ${user.displayName}` : "."}
       </h1>
     </div>
     <div className="flex items-center gap-3">
+      <Link
+        href="/"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-border/40 text-muted-foreground transition hover:text-foreground"
+        aria-label="Home"
+      >
+        <Home className="h-5 w-5" />
+      </Link>
       <Link
         href={view === "settings" ? "/" : "/?view=settings"}
         className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${
@@ -36,20 +43,30 @@ export const DashboardHeader = ({ user, view }: Props) => (
           <Settings className="h-5 w-5" />
         )}
       </Link>
-      {user.avatarUrl ? (
-        <Image
-          src={user.avatarUrl}
-          alt={user.displayName ?? "Spotify user avatar"}
-          width={44}
-          height={44}
-          className="h-11 w-11 rounded-full border border-border/40 object-cover"
-        />
-      ) : null}
-      <div className="text-right">
-        <p className="text-sm font-medium">
-          {user.email ?? user.displayName ?? "Spotify user"}
-        </p>
-      </div>
+      <a
+        href={`https://open.spotify.com/user/${user.id}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-2"
+        aria-label="Open Spotify profile"
+      >
+        {user.avatarUrl ? (
+          <Image
+            src={user.avatarUrl}
+            alt={user.displayName ?? "Spotify user avatar"}
+            width={44}
+            height={44}
+            className="h-11 w-11 rounded-full border border-border/40 object-cover"
+          />
+        ) : (
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border/40 bg-card/40 text-xs font-semibold">
+            {(user.displayName ?? "SP").slice(0, 2).toUpperCase()}
+          </div>
+        )}
+        <span className="text-sm font-medium">
+          {user.displayName ?? "Spotify user"}
+        </span>
+      </a>
       <SignOutButton />
     </div>
   </header>

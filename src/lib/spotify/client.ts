@@ -84,7 +84,7 @@ export type SpotifyClient = {
     accessToken: string,
     limit?: number
   ) => Promise<AlbumSummary[]>;
-  fetchTopArtists: (accessToken: string) => Promise<ArtistSummary[]>;
+  fetchFollowedArtists: (accessToken: string) => Promise<ArtistSummary[]>;
   fetchRecentlyPlayedPlaylists: (accessToken: string) => Promise<string[]>;
   fetchLikedTracksPreview: (
     accessToken: string,
@@ -469,11 +469,11 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
     return payload.total ?? 0;
   };
 
-  const fetchTopArtists = async (
+  const fetchFollowedArtists = async (
     accessToken: string
   ): Promise<ArtistSummary[]> => {
     const response = await fetch(
-      `${API_BASE}/me/top/artists?time_range=medium_term&limit=6`,
+      `${API_BASE}/me/following?type=artist&limit=20`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`
@@ -483,10 +483,11 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
     );
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Failed to load top artists: ${text}`);
+      throw new Error(`Failed to load followed artists: ${text}`);
     }
     const payload = await response.json();
-    return (payload.items ?? []).map((artist: any) => ({
+    const artists = payload?.artists?.items ?? [];
+    return artists.map((artist: any) => ({
       id: artist.id,
       name: artist.name,
       imageUrl: artist.images?.[0]?.url,
@@ -631,7 +632,7 @@ export const createSpotifyClient = (env: ServerEnv): SpotifyClient => {
     fetchLikedTracksTotal,
     fetchSavedAlbumsTotal,
     fetchSavedAlbums,
-    fetchTopArtists,
+    fetchFollowedArtists,
     fetchRecentlyPlayedPlaylists,
     fetchLikedTracksPreview,
     fetchTrackDetails,

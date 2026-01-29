@@ -1,8 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
-
 import { Button } from "@/ui/button";
+import { useSignOut } from "@/lib/auth/use-sign-out";
 
 export const SignInButton = () => (
   <Button asChild size="lg">
@@ -11,25 +10,13 @@ export const SignInButton = () => (
 );
 
 export const SignOutButton = () => {
-  const [pending, startTransition] = useTransition();
-
-  const handleSignOut = () => {
-    startTransition(async () => {
-      try {
-        await fetch("/api/auth/logout", {
-          method: "POST"
-        });
-      } finally {
-        window.location.href = "/";
-      }
-    });
-  };
+  const { pending, signOut } = useSignOut();
 
   return (
     <Button
       variant="outline"
       size="sm"
-      onClick={handleSignOut}
+      onClick={signOut}
       disabled={pending}
     >
       {pending ? "Signing out..." : "Sign out"}

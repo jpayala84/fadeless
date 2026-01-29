@@ -1,13 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useFormState } from "react-dom";
-import { toast } from "sonner";
-
-import {
-  runScanAction,
-  type RunScanState
-} from "@/app/actions/run-scan";
+import { useRunScanForm } from "@/lib/scan/use-run-scan-form";
 import { RunScanButton } from "@/components/run-scan-button";
 import { ScanStatus } from "@/components/scan-status";
 import { cn } from "@/lib/utils";
@@ -20,8 +13,6 @@ type Props = {
   className?: string;
 };
 
-const INITIAL_STATE: RunScanState = { status: "idle" };
-
 export const RunScanForm = ({
   mode,
   playlistId,
@@ -29,21 +20,13 @@ export const RunScanForm = ({
   showStatus = true,
   className
 }: Props) => {
-  const [state, formAction] = useFormState(runScanAction, INITIAL_STATE);
-
-  useEffect(() => {
-    if (state.status === "success") {
-      toast.success(`Scan started for ${state.scope}`);
-    } else if (state.status === "error") {
-      toast.error(state.message);
-    }
-  }, [state]);
+  const { formAction } = useRunScanForm();
 
   return (
     <form
       action={formAction}
       className={cn(
-        "flex flex-col items-stretch gap-3 sm:flex-row sm:items-center",
+        "flex flex-col items-stretch gap-2 sm:flex-row sm:items-center",
         className
       )}
     >

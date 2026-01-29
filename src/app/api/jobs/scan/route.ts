@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createRemovalEventRepository } from "@/lib/db/removal-repository";
+import { createScanHealthRepository } from "@/lib/db/scan-health-repository";
 import { createSnapshotRepository } from "@/lib/db/snapshot-repository";
 import { runDailyScan } from "@/lib/jobs/daily-scan";
+import { mapSpotifyError } from "@/lib/errors/spotify-errors";
 import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +28,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_playlist" }, { status: 400 });
   }
 
+  const rateKey = `scan:${user.id}:${mode}:${playlistId ?? "liked"}`;
+  const rate = checkRateLimit(rateKey, 2, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": Math.ceil((rate.resetAt - Date.now()) / 1000).toString()
+        }
+      }
+    );
+  }
+
   const client = getSpotifyClient();
   const repo = createSnapshotRepository();
   const removalRepo = createRemovalEventRepository();
+  const scanHealth = createScanHealthRepository();
 
   try {
     const diff = await withAccessToken(user.id, async (accessToken) =>
@@ -36,6 +54,7 @@ export async function POST(request: Request) {
         {
           repo,
           removalEvents: removalRepo,
+          scanHealth,
           spotify: {
             fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
             fetchPlaylistTracks: (id, name) =>
@@ -53,7 +72,17 @@ export async function POST(request: Request) {
       potentialReplacements: diff.potentialReplacements.length
     });
   } catch (error) {
-    console.error("[Daily Scan]", error);
-    return NextResponse.json({ error: "scan_failed" }, { status: 500 });
+    const mapped = mapSpotifyError(error);
+    console.error("[Daily Scan]", mapped.code);
+    const status =
+      mapped.code === "rate_limited"
+        ? 429
+        : mapped.code === "reauth_required"
+          ? 401
+          : 503;
+    return NextResponse.json(
+      { error: mapped.code, message: mapped.message },
+      { status }
+    );
   }
 }

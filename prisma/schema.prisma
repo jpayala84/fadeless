@@ -66,6 +66,7 @@ model User {
   notification   NotificationPreference?
   baselines      BaselineState[]
   monitoredPlaylists MonitoredPlaylist[]
+  scanHealth     ScanHealth[]
 }
 
 model Token {
@@ -148,4 +149,24 @@ model NotificationPreference {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ScanHealth {
+  id              String        @id @default(cuid())
+  userId          String
+  scope           SnapshotScope
+  playlistId      String        @default("")
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  lastDurationMs  Int?
+  lastTrackCount  Int?
+  lastRemovedCount Int?
+  lastErrorCode   String?
+  lastErrorMessage String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scope, playlistId])
+  @@index([userId, scope, playlistId])
 }

@@ -5,9 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/current-user';
 import { prisma } from '@/lib/db/client';
 import { createRemovalEventRepository } from '@/lib/db/removal-repository';
+import { createScanHealthRepository } from "@/lib/db/scan-health-repository";
 import { createSnapshotRepository } from '@/lib/db/snapshot-repository';
 import { runDailyScan } from '@/lib/jobs/daily-scan';
+import { mapSpotifyError } from "@/lib/errors/spotify-errors";
 import { getSpotifyClient, withAccessToken } from '@/lib/spotify/service';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export type RunScanState =
   | { status: 'idle' }
@@ -37,9 +40,20 @@ export const runScanAction = async (
     return { status: 'error', message: 'Missing playlist identifier.' };
   }
 
+  const rateKey = `scan:${user.id}:${mode}:${playlistId ?? 'liked'}`;
+  const rate = checkRateLimit(rateKey, 2, 60_000);
+  if (!rate.allowed) {
+    const retrySeconds = Math.ceil((rate.resetAt - Date.now()) / 1000);
+    return {
+      status: 'error',
+      message: `Rate limited. Try again in ${retrySeconds}s.`
+    };
+  }
+
   const client = getSpotifyClient();
   const repo = createSnapshotRepository();
   const removalRepo = createRemovalEventRepository();
+  const scanHealth = createScanHealthRepository();
 
   try {
     await withAccessToken(user.id, async (accessToken) =>
@@ -48,6 +62,7 @@ export const runScanAction = async (
         {
           repo,
           removalEvents: removalRepo,
+          scanHealth,
           spotify: {
             fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
             fetchPlaylistTracks: (id, name) =>
@@ -89,10 +104,11 @@ export const runScanAction = async (
             : 'Liked Songs'
     };
   } catch (error) {
-    console.error('[RunScanAction]', error);
+    const mapped = mapSpotifyError(error);
+    console.error("[RunScanAction]", mapped.code);
     return {
       status: 'error',
-      message: 'Scan failed. Please try again.'
+      message: mapped.message
     };
   }
 };

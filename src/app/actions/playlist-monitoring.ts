@@ -5,8 +5,10 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db/client";
 import { createRemovalEventRepository } from "@/lib/db/removal-repository";
+import { createScanHealthRepository } from "@/lib/db/scan-health-repository";
 import { createSnapshotRepository } from "@/lib/db/snapshot-repository";
 import { runDailyScan } from "@/lib/jobs/daily-scan";
+import { mapSpotifyError } from "@/lib/errors/spotify-errors";
 import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
 
 export type ToggleMonitoringResult =
@@ -76,6 +78,7 @@ export const togglePlaylistMonitoring = async ({
     try {
       const snapshotRepo = createSnapshotRepository();
       const removalRepo = createRemovalEventRepository();
+      const scanHealth = createScanHealthRepository();
       const client = getSpotifyClient();
       await withAccessToken(user.id, async (accessToken) =>
         runDailyScan(
@@ -83,6 +86,7 @@ export const togglePlaylistMonitoring = async ({
           {
             repo: snapshotRepo,
             removalEvents: removalRepo,
+            scanHealth,
             spotify: {
               fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
               fetchPlaylistTracks: (id, name) =>
@@ -93,10 +97,8 @@ export const togglePlaylistMonitoring = async ({
         )
       );
     } catch (error) {
-      console.error(
-        "[PlaylistMonitoring] Baseline scan failed",
-        error instanceof Error ? error.message : String(error)
-      );
+      const mapped = mapSpotifyError(error);
+      console.error("[PlaylistMonitoring] Baseline scan failed", mapped.code);
     }
   }
 

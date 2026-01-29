@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { formatDuration } from "@/lib/dashboard/track-format";
+
 type TrackRow = {
   id: string;
   name: string;
@@ -21,19 +23,10 @@ type Props = {
   pagination?: {
     currentPage: number;
     totalPages: number;
+    startIndex?: number;
     prevHref?: string;
     nextHref?: string;
   };
-};
-
-const formatDuration = (duration?: number) => {
-  if (!duration) {
-    return "—";
-  }
-  const totalSeconds = Math.floor(duration / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
 export const TrackTable = ({
@@ -85,30 +78,63 @@ export const TrackTable = ({
       </div>
       <div className="divide-y divide-border/30">
         {tracks.map((track, index) => {
+          const rowIndex =
+            (pagination?.startIndex ?? 0) + index + 1;
           return (
             <div
               key={track.id ?? `${track.name}-${index}`}
-              className="grid grid-cols-[40px_minmax(0,1fr)_80px] items-center gap-3 px-4 py-3 text-sm text-foreground transition hover:bg-card/50"
+              className="min-h-[68px] grid grid-cols-[40px_minmax(0,1fr)_80px] items-center gap-3 px-4 py-3 text-sm text-foreground transition hover:bg-card/50"
             >
-              <span className="text-xs text-muted-foreground">{index + 1}</span>
+              <span className="text-xs text-muted-foreground">{rowIndex}</span>
               <div className="flex items-center gap-3">
-                {track.imageUrl ? (
-                  <Image
-                    src={track.imageUrl}
-                    alt={track.name}
-                    width={44}
-                    height={44}
-                    className="h-11 w-11 rounded-md object-cover"
-                  />
+                {track.externalUrl ? (
+                  <a
+                    href={track.externalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3"
+                  >
+                    {track.imageUrl ? (
+                      <Image
+                        src={track.imageUrl}
+                        alt={track.name}
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="h-11 w-11 rounded-md bg-gradient-to-b from-emerald-400/20 to-transparent" />
+                    )}
+                    <div>
+                      <p className="font-medium underline-offset-4 hover:underline">
+                        {track.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {track.artists.join(", ")}
+                      </p>
+                    </div>
+                  </a>
                 ) : (
-                  <div className="h-11 w-11 rounded-md bg-gradient-to-b from-emerald-400/20 to-transparent" />
+                  <>
+                    {track.imageUrl ? (
+                      <Image
+                        src={track.imageUrl}
+                        alt={track.name}
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="h-11 w-11 rounded-md bg-gradient-to-b from-emerald-400/20 to-transparent" />
+                    )}
+                    <div>
+                      <p className="font-medium">{track.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {track.artists.join(", ")}
+                      </p>
+                    </div>
+                  </>
                 )}
-                <div>
-                  <p className="font-medium">{track.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {track.artists.join(", ")}
-                  </p>
-                </div>
               </div>
               <span className="text-right text-xs text-muted-foreground">
                 {formatDuration(track.durationMs)}
@@ -117,9 +143,14 @@ export const TrackTable = ({
           );
         })}
         {tracks.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            No tracks to display yet.
-          </p>
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+            <p className="text-base font-semibold text-foreground">
+              Nothing to show yet
+            </p>
+            <p className="mt-1">
+              Switch collections to see tracks here.
+            </p>
+          </div>
         ) : null}
       </div>
     </div>

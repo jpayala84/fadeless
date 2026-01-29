@@ -1,11 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
-
-import { initializeMonitoring } from "@/app/actions/playlist-monitoring";
 import type { PlaylistSummary } from "@/lib/spotify/client";
 import { cn } from "@/lib/utils";
+import { usePlaylistOnboarding } from "@/lib/onboarding/use-playlist-onboarding";
 
 type Props = {
   playlists: PlaylistSummary[];
@@ -13,42 +10,12 @@ type Props = {
 };
 
 export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
-  const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<string[]>([]);
-  const limitedPlaylists = useMemo(() => playlists.slice(0, 12), [playlists]);
+  const { pending, selected, limitedPlaylists, maxSelect, toggle, submit } =
+    usePlaylistOnboarding({ playlists });
 
   if (!open) {
     return null;
   }
-
-  const toggle = (id: string) => {
-    setSelected((current) => {
-      if (current.includes(id)) {
-        return current.filter((value) => value !== id);
-      }
-      if (current.length >= 5) {
-        toast.error("Pick up to 5 playlists.");
-        return current;
-      }
-      return [...current, id];
-    });
-  };
-
-  const handleSubmit = () => {
-    if (!selected.length) {
-      toast.error("Select at least one playlist.");
-      return;
-    }
-    startTransition(async () => {
-      const payload = limitedPlaylists.filter((playlist) =>
-        selected.includes(playlist.id)
-      );
-      await initializeMonitoring(payload.map((playlist) => ({
-        playlistId: playlist.id,
-        playlistName: playlist.name
-      })));
-    });
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 backdrop-blur">
@@ -59,7 +26,7 @@ export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
           </p>
           <h2 className="text-2xl font-semibold">Pick playlists to monitor</h2>
           <p className="text-sm text-muted-foreground">
-            Choose up to 5 playlists to track. You can scan them together anytime.
+            Choose up to {maxSelect} playlists to track.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -86,11 +53,13 @@ export const PlaylistOnboardingDialog = ({ playlists, open }: Props) => {
           })}
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{selected.length}/5 selected</span>
+          <span>
+            {selected.length}/{maxSelect} selected
+          </span>
           <button
             type="button"
             disabled={pending}
-            onClick={handleSubmit}
+            onClick={submit}
             className="rounded-full bg-emerald-500 px-4 py-2 font-semibold text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-60"
           >
             Start monitoring

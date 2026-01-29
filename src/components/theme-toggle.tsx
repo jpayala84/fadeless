@@ -1,23 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
-
-import { setTheme } from "@/app/actions/set-theme";
 import { cn } from "@/lib/utils";
+import { useThemeToggle } from "@/lib/settings/use-theme-toggle";
 
 type ThemeToggleProps = {
   currentTheme: "light" | "dark";
 };
 
 export const ThemeToggle = ({ currentTheme }: ThemeToggleProps) => {
-  const [pending, startTransition] = useTransition();
-
-  const handleChange = (theme: "light" | "dark") => {
-    if (theme === currentTheme) {
-      return;
-    }
-    startTransition(() => setTheme(theme));
-  };
+  const { pending, changeTheme } = useThemeToggle(currentTheme);
 
   const optionClass = (selected: boolean) =>
     cn(
@@ -33,7 +24,7 @@ export const ThemeToggle = ({ currentTheme }: ThemeToggleProps) => {
         <button
           type="button"
           className={optionClass(currentTheme === "dark")}
-          onClick={() => handleChange("dark")}
+          onClick={() => changeTheme("dark")}
           disabled={pending}
         >
           Dark
@@ -41,7 +32,7 @@ export const ThemeToggle = ({ currentTheme }: ThemeToggleProps) => {
         <button
           type="button"
           className={optionClass(currentTheme === "light")}
-          onClick={() => handleChange("light")}
+          onClick={() => changeTheme("light")}
           disabled={pending}
         >
           Light

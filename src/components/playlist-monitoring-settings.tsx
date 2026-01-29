@@ -1,9 +1,6 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
-import { toast } from "sonner";
-
-import { togglePlaylistMonitoring } from "@/app/actions/playlist-monitoring";
+import { usePlaylistMonitoringSettings } from "@/lib/settings/use-playlist-monitoring-settings";
 import type { PlaylistSummary } from "@/lib/spotify/client";
 import { cn } from "@/lib/utils";
 
@@ -13,29 +10,10 @@ type Props = {
 };
 
 export const PlaylistMonitoringSettings = ({ playlists, monitored }: Props) => {
-  const [pending, startTransition] = useTransition();
-
-  const enabledCount = useMemo(
-    () => Object.values(monitored).filter(Boolean).length,
-    [monitored]
+  const { pending, enabledCount, toggle } = usePlaylistMonitoringSettings(
+    playlists,
+    monitored
   );
-
-  const toggle = (playlist: PlaylistSummary, nextEnabled: boolean) => {
-    startTransition(async () => {
-      const result = await togglePlaylistMonitoring({
-        playlistId: playlist.id,
-        playlistName: playlist.name,
-        enabled: nextEnabled
-      });
-      if (result.status === "error") {
-        toast.error(result.message);
-        return;
-      }
-      toast.success(
-        result.enabled ? `Tracking ${playlist.name}` : `Stopped tracking ${playlist.name}`
-      );
-    });
-  };
 
   return (
     <div className="space-y-3">
@@ -52,9 +30,6 @@ export const PlaylistMonitoringSettings = ({ playlists, monitored }: Props) => {
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">{playlist.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {isEnabled ? "Tracking enabled" : "Playlist not tracked"}
-                </p>
               </div>
               <button
                 type="button"

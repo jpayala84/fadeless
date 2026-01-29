@@ -1,32 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import {
-  usePathname,
-  useRouter,
-  useSearchParams
-} from "next/navigation";
-import { useEffect, useMemo, useState, useTransition, type KeyboardEvent } from "react";
-import { toast } from "sonner";
 
-import { togglePlaylistMonitoring } from "@/app/actions/playlist-monitoring";
 import { RunScanForm } from "@/components/run-scan-form";
-import type {
-  AlbumSummary,
-  ArtistSummary,
-  PlaylistTrack,
-  PlaylistSummary,
-  SpotifyTrack
-} from "@/lib/spotify/client";
+import type { AlbumSummary, ArtistSummary, PlaylistSummary } from "@/lib/spotify/client";
 import { cn } from "@/lib/utils";
+import { LIBRARY_PANEL_TABS } from "@/lib/dashboard/library-tabs";
+import { useLibraryPanelState } from "@/lib/dashboard/use-library-panel";
 
 type Props = {
   likedSongsCount: number;
   savedAlbumsCount: number;
   playlists: PlaylistSummary[];
-  topArtists: ArtistSummary[];
+  followedArtists: ArtistSummary[];
   savedAlbums: AlbumSummary[];
-  playlistPreview?: PlaylistTrack[];
   monitoredPlaylists?: Record<string, boolean>;
   playlistBadgeCounts?: Record<string, number>;
   likedBadgeCount?: number;
@@ -36,272 +23,66 @@ type Props = {
     id?: string;
   };
   page?: number;
+  preferredPanel?: "playlists" | "artists" | "albums";
 };
-
-const PANEL_TABS = [
-  { id: "playlists", label: "Playlists" },
-  { id: "artists", label: "Artists" },
-  { id: "albums", label: "Albums" }
-] as const;
-
-const PAGE_SIZE = 5;
-
-const clampPage = (value: number, totalPages: number) =>
-  Math.min(Math.max(value, 0), Math.max(totalPages - 1, 0));
 
 export const LibraryPanel = ({
   likedSongsCount,
   savedAlbumsCount,
   playlists,
-  topArtists,
+  followedArtists,
   savedAlbums,
-  playlistPreview = [],
   monitoredPlaylists = {},
   playlistBadgeCounts = {},
   likedBadgeCount = 0,
   badgePollingEnabled = false,
   activeCollection,
-  page = 0
+  page = 0,
+  preferredPanel
 }: Props) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const sortedPlaylists = useMemo(() => {
-    const tracked = playlists.filter((playlist) => monitoredPlaylists[playlist.id]);
-    const untracked = playlists.filter((playlist) => !monitoredPlaylists[playlist.id]);
-    return [...tracked, ...untracked];
-  }, [playlists, monitoredPlaylists]);
-
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(sortedPlaylists.length / PAGE_SIZE)),
-    [sortedPlaylists.length]
-  );
-
-  const [currentPage, setCurrentPage] = useState(clampPage(page, totalPages));
-  const [activePanel, setActivePanel] = useState<(typeof PANEL_TABS)[number]["id"]>("playlists");
-  const [playlistTracks, setPlaylistTracks] = useState<PlaylistTrack[]>(
-    () => playlistPreview.slice()
-  );
-  const [pendingMonitor, startMonitorTransition] = useTransition();
-  const [pendingScanAll, startScanAllTransition] = useTransition();
-  const [badgeCountsState, setBadgeCountsState] = useState<Record<string, number>>(
-    () => ({ ...playlistBadgeCounts })
-  );
-  const [likedBadgeCountState, setLikedBadgeCountState] = useState(likedBadgeCount);
-
-  useEffect(() => {
-    setCurrentPage(clampPage(page, totalPages));
-  }, [page, totalPages]);
-
-  useEffect(() => {
-    setPlaylistTracks(playlistPreview.slice());
-  }, [playlistPreview]);
-
-  useEffect(() => {
-    setBadgeCountsState({ ...playlistBadgeCounts });
-  }, [playlistBadgeCounts]);
-
-  useEffect(() => {
-    setLikedBadgeCountState(likedBadgeCount);
-  }, [likedBadgeCount]);
-
-  useEffect(() => {
-    if (!badgePollingEnabled) {
-      return;
-    }
-
-    let canceled = false;
-    let interval: ReturnType<typeof setInterval> | undefined;
-
-    const poll = async () => {
-      try {
-        const response = await fetch("/api/notifications/badges", {
-          cache: "no-store"
-        });
-        if (!response.ok) {
-          return;
-        }
-        const payload = (await response.json()) as
-          | {
-              ok: true;
-              enabled: true;
-              likedBadgeCount: number;
-              playlistBadgeCounts: Record<string, number>;
-            }
-          | {
-              ok: true;
-              enabled: false;
-              likedBadgeCount: number;
-              playlistBadgeCounts: Record<string, number>;
-            };
-
-        if (canceled || !payload.ok) {
-          return;
-        }
-
-        setLikedBadgeCountState(payload.likedBadgeCount);
-        setBadgeCountsState(payload.playlistBadgeCounts);
-      } catch {
-        // ignore
-      }
-    };
-
-    poll();
-    interval = setInterval(poll, 15000);
-
-    return () => {
-      canceled = true;
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [badgePollingEnabled]);
-
-  const updateRoute = (
-    overrides: Record<string, string | number | undefined>,
-    { replace = true }: { replace?: boolean } = {}
-  ) => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    Object.entries(overrides).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === "") {
-        params.delete(key);
-      } else {
-        params.set(key, String(value));
-      }
-    });
-    const query = params.toString();
-    const next = query ? `${pathname}?${query}` : pathname;
-    const nav = replace ? router.replace : router.push;
-    nav(next, { scroll: false });
-  };
-
-  const changePage = (nextPage: number) => {
-    const clamped = clampPage(nextPage, totalPages);
-    setCurrentPage(clamped);
-    updateRoute({ playlistPage: clamped }, { replace: true });
-  };
-
-  const buildCollectionHref = (
-    type: "playlist" | "liked" | "album",
-    options?: { id?: string; name?: string }
-  ) => {
-    const params = new URLSearchParams(searchParams?.toString() ?? "");
-    params.set("collection", type);
-    if (options?.id) {
-      params.set("collectionId", options.id);
-    } else {
-      params.delete("collectionId");
-    }
-    if (options?.name) {
-      params.set("collectionName", options.name);
-    } else {
-      params.delete("collectionName");
-    }
-    params.delete("playlist");
-    params.delete("playlistPage");
-    params.delete("collectionPage");
-    const query = params.toString();
-    return query ? `${pathname}?${query}` : pathname;
-  };
-
-  const visiblePlaylists = useMemo(() => {
-    const start = currentPage * PAGE_SIZE;
-    return sortedPlaylists.slice(start, start + PAGE_SIZE);
-  }, [currentPage, sortedPlaylists]);
-
-  const viewCollection = (
-    type: "playlist" | "liked" | "album",
-    options?: { id?: string; name?: string }
-  ) => {
-    const href = buildCollectionHref(type, options);
-    router.push(href, { scroll: false });
-  };
-
-  const handlePlaylistFocus = (playlistId: string, playlistName: string) => {
-    setCurrentPage(0);
-    setActivePanel("playlists");
-    viewCollection("playlist", { id: playlistId, name: playlistName });
-  };
-
-  const enabledMonitorCount = useMemo(
-    () => Object.values(monitoredPlaylists).filter(Boolean).length,
-    [monitoredPlaylists]
-  );
-  const trackedPlaylists = useMemo(
-    () => sortedPlaylists.filter((playlist) => monitoredPlaylists[playlist.id]),
-    [sortedPlaylists, monitoredPlaylists]
-  );
-
-  const toggleMonitor = (playlist: PlaylistSummary, nextEnabled: boolean) => {
-    startMonitorTransition(async () => {
-      try {
-        const result = await togglePlaylistMonitoring({
-          playlistId: playlist.id,
-          playlistName: playlist.name,
-          enabled: nextEnabled
-        });
-        if (result.status === "error") {
-          toast.error(result.message);
-          return;
-        }
-        toast.success(
-          result.enabled
-            ? `Tracking ${playlist.name}`
-            : `Stopped tracking ${playlist.name}`
-        );
-      } catch {
-        toast.error("Could not update playlist monitoring.");
-      }
-    });
-  };
-
-  const scanAllTracked = () => {
-    if (!trackedPlaylists.length) {
-      toast.info("Select playlists to track first.");
-      return;
-    }
-    startScanAllTransition(async () => {
-      for (const playlist of trackedPlaylists) {
-        try {
-          await fetch("/api/jobs/scan", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              mode: "playlist",
-              playlistId: playlist.id,
-              playlistName: playlist.name
-            })
-          });
-        } catch {
-          // ignore
-        }
-      }
-      toast.success("Scan started for tracked playlists.");
-    });
-  };
-
-  const handleKeyActivate = (
-    event: KeyboardEvent<HTMLElement>,
-    callback: () => void
-  ) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      callback();
-    }
-  };
+  const {
+    badgeCountsState,
+    likedBadgeCountState,
+    currentPage,
+    totalPages,
+    activePanel,
+    pendingMonitor,
+    enabledMonitorCount,
+    visiblePlaylists,
+    setActivePanel,
+    changePage,
+    viewCollection,
+    handlePlaylistFocus,
+    toggleMonitor,
+    handleKeyActivate,
+    isNavigating
+  } = useLibraryPanelState({
+    likedSongsCount,
+    savedAlbumsCount,
+    playlists,
+    followedArtists,
+    savedAlbums,
+    monitoredPlaylists,
+    playlistBadgeCounts,
+    likedBadgeCount,
+    badgePollingEnabled,
+    activeCollection,
+    page,
+    preferredPanel
+  });
 
   return (
-    <section className="surface-card space-y-5 rounded-3xl border border-border/40 bg-card/50 p-6 backdrop-blur">
+    <section
+      className="surface-card space-y-5 rounded-3xl border border-border/40 bg-card/50 p-6 backdrop-blur"
+      aria-busy={isNavigating}
+    >
       <div
         role="button"
         tabIndex={0}
         onClick={() => viewCollection("liked")}
         onKeyDown={(event) => handleKeyActivate(event, () => viewCollection("liked"))}
         className={cn(
-          "relative w-full rounded-3xl border border-border/40 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
+          "relative w-full min-h-[92px] rounded-3xl border border-border/40 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
           activeCollection?.type === "liked"
             ? "border-emerald-400/50 bg-emerald-400/10"
             : ""
@@ -330,8 +111,8 @@ export const LibraryPanel = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {PANEL_TABS.map((tab) => (
+      <div className="flex flex-wrap items-center gap-2">
+        {LIBRARY_PANEL_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -346,6 +127,9 @@ export const LibraryPanel = ({
             {tab.label}
           </button>
         ))}
+        {isNavigating ? (
+          <span className="text-xs text-muted-foreground">Loading…</span>
+        ) : null}
       </div>
 
       {activePanel === "playlists" ? (
@@ -384,7 +168,7 @@ export const LibraryPanel = ({
                 <li
                   key={playlist.id}
                   className={cn(
-                    "relative cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
+                    "relative min-h-[92px] cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
                     isActive
                       ? "border-emerald-400/50 bg-emerald-400/10"
                       : "border-border/40 bg-card/30 hover:border-emerald-300/40"
@@ -425,9 +209,6 @@ export const LibraryPanel = ({
                         <p className="text-xs text-muted-foreground">
                           {playlist.trackCount} tracks · {playlist.owner}
                         </p>
-                        <p className="text-[0.65rem] text-muted-foreground">
-                          {isTracked ? "Tracking enabled" : "Playlist not tracked"}
-                        </p>
                       </div>
                       <div
                         className="flex items-center gap-2"
@@ -464,46 +245,6 @@ export const LibraryPanel = ({
               );
             })}
           </ul>
-          {activeCollection?.type === "playlist" && playlistTracks.length > 0 ? (
-            <div className="rounded-2xl border border-border/40 bg-card/30 p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">
-                  Playlist overview
-                </p>
-                <span className="text-xs text-muted-foreground">
-                  {playlistTracks.length} tracks previewed
-                </span>
-              </div>
-              <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-2">
-                {playlistTracks.map((track) => (
-                  <div
-                    key={track.id}
-                    className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/30 p-2 text-xs"
-                  >
-                    {track.imageUrl ? (
-                      <Image
-                        src={track.imageUrl}
-                        alt={track.name}
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg bg-gradient-to-b from-emerald-400/20 to-transparent" />
-                    )}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {track.name}
-                      </p>
-                      <p className="text-[0.65rem] text-muted-foreground">
-                        {track.artists.join(", ")}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : null}
 
@@ -517,39 +258,71 @@ export const LibraryPanel = ({
               const isActive =
                 activeCollection?.type === "album" &&
                 activeCollection.id === album.id;
+              const albumHref = `https://open.spotify.com/album/${album.id}`;
+              const artistHref = `https://open.spotify.com/artist/${album.artistId}`;
               return (
-                <button
+                <div
                   key={album.id}
-                  type="button"
                   onClick={() =>
                     viewCollection("album", { id: album.id, name: album.name })
                   }
+                  onKeyDown={(event) =>
+                    handleKeyActivate(event, () =>
+                      viewCollection("album", { id: album.id, name: album.name })
+                    )
+                  }
+                  role="button"
+                  tabIndex={0}
                   className={cn(
-                    "flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-inner transition",
+                    "min-h-[92px] flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-inner transition",
                     isActive
                       ? "border-emerald-400/70 bg-emerald-400/10"
                       : "border-border/40 bg-card/30 hover:border-emerald-300/40"
                   )}
                 >
-                  {album.imageUrl ? (
-                    <Image
-                      src={album.imageUrl}
-                      alt={album.name}
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-b from-emerald-400/20 to-transparent" />
-                  )}
-                  <div>
-                    <p className="font-medium">{album.name}</p>
-                    <p className="text-xs text-muted-foreground">{album.artist}</p>
-                    <p className="mt-1 text-[0.65rem] text-muted-foreground">
-                      View tracks
-                    </p>
+                  <div className="flex items-center gap-3">
+                    {album.imageUrl ? (
+                      <a
+                        href={albumHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Image
+                          src={album.imageUrl}
+                          alt={album.name}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-xl object-cover"
+                        />
+                      </a>
+                    ) : (
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-b from-emerald-400/20 to-transparent" />
+                    )}
+                    <div>
+                      <a
+                        href={albumHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                        className="font-medium underline-offset-4 hover:underline"
+                      >
+                        {album.name}
+                      </a>
+                      <div className="text-xs text-muted-foreground">
+                        <a
+                          href={artistHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {album.artist}
+                        </a>
+                      </div>
+                    </div>
                   </div>
-                </button>
+                </div>
               );
             })}
             {savedAlbums.length === 0 ? (
@@ -563,7 +336,7 @@ export const LibraryPanel = ({
 
       {activePanel === "artists" ? (
         <div className="grid gap-3">
-          {topArtists.map((artist) => (
+          {followedArtists.map((artist) => (
             <a
               key={artist.id}
               href={`https://open.spotify.com/artist/${artist.id}`}
@@ -596,14 +369,13 @@ export const LibraryPanel = ({
               </span>
             </a>
           ))}
-          {topArtists.length === 0 ? (
+          {followedArtists.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              We’ll populate this list after your first scan.
+              You are not following any artists on Spotify yet.
             </p>
           ) : null}
         </div>
       ) : null}
-
     </section>
   );
 };

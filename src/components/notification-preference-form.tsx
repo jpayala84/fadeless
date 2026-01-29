@@ -1,36 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
-import { toast } from "sonner";
-
-import {
-  updateNotificationPreference,
-  type NotificationPreferenceState
-} from "@/app/actions/notification-preferences";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/ui/button";
+import { useNotificationPreferenceForm } from "@/lib/notifications/use-notification-preference";
 
 type Props = {
   enabled: boolean;
 };
 
-const INITIAL_STATE: NotificationPreferenceState = { status: "idle" };
-
 export const NotificationPreferenceForm = ({
   enabled
 }: Props) => {
-  const [state, formAction] = useFormState(
-    updateNotificationPreference,
-    INITIAL_STATE
-  );
-
-  useEffect(() => {
-    if (state.status === "success") {
-      toast.success("Notification preference saved.");
-    } else if (state.status === "error") {
-      toast.error(state.message);
-    }
-  }, [state]);
+  const { formAction } = useNotificationPreferenceForm();
 
   return (
     <form className="space-y-4" action={formAction}>

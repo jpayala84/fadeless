@@ -1,15 +1,14 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
-
+import { useScanStatus } from "@/lib/scan/use-scan-status";
 import { Button } from "@/ui/button";
 
 type Props = {
   label?: string;
 };
 
-export const RunScanButton = ({ label = "Run daily scan" }: Props) => {
-  const status = useFormStatus();
+export const RunScanButton = ({ label = "Scan now" }: Props) => {
+  const status = useScanStatus();
 
   return (
     <Button
