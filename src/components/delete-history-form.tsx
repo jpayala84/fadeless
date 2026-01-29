@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { useDeleteHistoryForm } from "@/lib/settings/use-delete-history-form";
 
 type Props = {
-  action: () => void;
+  action: (formData: FormData) => void | Promise<void>;
 };
 
 const DeleteButton = () => {
