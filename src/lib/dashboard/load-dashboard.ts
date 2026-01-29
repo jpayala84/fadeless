@@ -4,6 +4,7 @@ import {
   listRemovalEventsForWeek
 } from "@/lib/db/removal-repository";
 import { getBaselineStatus } from "@/lib/db/baseline-repository";
+import type { BaselineStatus } from "@/lib/db/baseline-repository";
 import { attachRemovalArtwork } from "@/lib/removals/with-artwork";
 import { getLibraryOverview } from "@/lib/spotify/library";
 import { getSpotifyClient, withAccessToken } from "@/lib/spotify/service";
@@ -48,6 +49,7 @@ type DashboardModel = {
         lastTrackCount: number | null;
       }
     | null;
+  likedBaseline: BaselineStatus | null;
   showLikedBaseline: boolean;
   isLocalEnv: boolean;
   playlistsAffected: number;
