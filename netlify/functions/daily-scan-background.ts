@@ -15,7 +15,6 @@ export const config = {
 };
 
 const MAX_PLAYLISTS_PER_USER = 5;
-const LIKED_MAX_PAGES = 1; // keep cron light to reduce API usage
 
 export const handler = (async (
   _event: HandlerEvent,
@@ -48,7 +47,8 @@ export const handler = (async (
       continue;
     }
 
-    // Liked scan (light: single page to reduce API load)
+    // Liked scan (must be consistent with manual scan, otherwise we can create
+    // false "removed" results when a full snapshot is followed by a partial one).
     try {
       await withAccessToken(user.id, async (accessToken) =>
         runDailyScan(
@@ -58,8 +58,7 @@ export const handler = (async (
             removalEvents: removalRepo,
             scanHealth,
             spotify: {
-              fetchLikedTracks: () =>
-                client.fetchLikedTracks(accessToken, { maxPages: LIKED_MAX_PAGES }),
+              fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
               fetchPlaylistTracks: (id, name) =>
                 client.fetchPlaylistTracks(accessToken, id, name)
             }
@@ -78,20 +77,19 @@ export const handler = (async (
       try {
         await withAccessToken(user.id, async (accessToken) =>
           runDailyScan(
-            user.id,
-            {
-              repo: snapshotRepo,
-              removalEvents: removalRepo,
-              scanHealth,
-              spotify: {
-                fetchLikedTracks: () =>
-                  client.fetchLikedTracks(accessToken, { maxPages: LIKED_MAX_PAGES }),
-                fetchPlaylistTracks: (id, name) =>
-                  client.fetchPlaylistTracks(accessToken, id, name)
-              }
-            },
-            {
-              type: "playlist",
+          user.id,
+          {
+            repo: snapshotRepo,
+            removalEvents: removalRepo,
+            scanHealth,
+            spotify: {
+              fetchLikedTracks: () => client.fetchLikedTracks(accessToken),
+              fetchPlaylistTracks: (id, name) =>
+                client.fetchPlaylistTracks(accessToken, id, name)
+            }
+          },
+          {
+            type: "playlist",
               playlistId: playlist.playlistId,
               playlistName: playlist.playlistName
             }
@@ -115,4 +113,3 @@ export const handler = (async (
     body: "ok"
   };
 }) satisfies Handler;
-
