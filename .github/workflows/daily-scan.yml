@@ -11,7 +11,14 @@ jobs:
     steps:
       - name: Trigger Netlify function
         env:
-          NETLIFY_FUNCTION_URL: https://lostrack.netlify.app/.netlify/functions/daily-scan
+          NETLIFY_FUNCTION_URL: https://fadeless.app/.netlify/functions/daily-scan
         run: |
           echo "Triggering Netlify function at $NETLIFY_FUNCTION_URL"
-          curl -s -X POST "$NETLIFY_FUNCTION_URL"
+          response="$(curl -sS -X POST --max-time 300 -w '\n%{http_code}' "$NETLIFY_FUNCTION_URL")"
+          body="$(echo "$response" | sed '$d')"
+          status="$(echo "$response" | tail -n 1)"
+          echo "$body"
+          echo "HTTP $status"
+          if [[ "$status" != 2* ]]; then
+            exit 1
+          fi
