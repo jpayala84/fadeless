@@ -12,6 +12,9 @@ export type PageSearchParams = {
   collectionId?: string;
   collectionName?: string;
   collectionPage?: string;
+  error?: string;
+  reason?: string;
+  errorId?: string;
 };
 
 export type DashboardParams = {
@@ -53,4 +56,3 @@ export type TrackTableSource = {
   tracks: SpotifyTrack[];
   total: number;
 };
-

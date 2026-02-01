@@ -22,6 +22,7 @@ import { formatDate, formatTimeAgo } from "@/lib/dashboard/formatters";
 import { loadDashboardData } from "@/lib/dashboard/load-dashboard";
 import { makeBuildHref } from "@/lib/dashboard/navigation";
 import type { PageSearchParams } from "@/lib/dashboard/types";
+import { getLandingAuthError } from "@/lib/marketing/access-request";
 
 type PageProps = {
   searchParams?: PageSearchParams;
@@ -32,9 +33,10 @@ const HomePage = async ({ searchParams }: PageProps) => {
   const themeCookie = cookies().get("theme")?.value === "light" ? "light" : "dark";
 
   if (!user) {
+    const authError = getLandingAuthError(searchParams);
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <LandingHero />
+        <LandingHero authError={authError} errorId={searchParams?.errorId} />
       </main>
     );
   }

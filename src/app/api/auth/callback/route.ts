@@ -54,6 +54,9 @@ export async function GET(request: Request) {
     const reason = inferAuthFailureReason(err);
     const errorId = crypto.randomUUID().slice(0, 8);
     console.error('[Spotify Callback Error]', { errorId, reason, err });
+    if (reason === "spotify_profile") {
+      return redirectWithError(env, "not_allowlisted", { errorId });
+    }
     return redirectWithError(env, 'auth_failed', { reason, errorId });
   }
 }
