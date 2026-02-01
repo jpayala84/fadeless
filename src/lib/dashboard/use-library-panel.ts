@@ -207,6 +207,17 @@ export const useLibraryPanelState = ({
     };
   }, [badgePollingEnabled]);
 
+  const clearLikedBadgeNow = useCallback(() => {
+    setLikedBadgeCountState(0);
+  }, []);
+
+  const clearPlaylistBadgeNow = useCallback((playlistId: string) => {
+    setBadgeCountsState((current) => ({
+      ...current,
+      [playlistId]: 0
+    }));
+  }, []);
+
   return {
     badgeCountsState,
     likedBadgeCountState,
@@ -224,6 +235,8 @@ export const useLibraryPanelState = ({
     handleKeyActivate,
     isNavigating,
     followedArtists,
-    savedAlbums
+    savedAlbums,
+    clearLikedBadgeNow,
+    clearPlaylistBadgeNow
   };
 };

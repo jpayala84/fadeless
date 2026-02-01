@@ -55,7 +55,9 @@ export const LibraryPanel = ({
     handlePlaylistFocus,
     toggleMonitor,
     handleKeyActivate,
-    isNavigating
+    isNavigating,
+    clearLikedBadgeNow,
+    clearPlaylistBadgeNow
   } = useLibraryPanelState({
     likedSongsCount,
     savedAlbumsCount,
@@ -106,7 +108,11 @@ export const LibraryPanel = ({
             </p>
           </div>
           <div onClick={(event) => event.stopPropagation()}>
-            <RunScanForm mode="liked" showStatus={false} />
+            <RunScanForm
+              mode="liked"
+              showStatus={false}
+              onSuccess={clearLikedBadgeNow}
+            />
           </div>
         </div>
       </div>
@@ -236,6 +242,7 @@ export const LibraryPanel = ({
                             playlistName={playlist.name}
                             mode="playlist"
                             showStatus={false}
+                            onSuccess={() => clearPlaylistBadgeNow(playlist.id)}
                           />
                         ) : null}
                       </div>

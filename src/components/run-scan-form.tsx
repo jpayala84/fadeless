@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { useRunScanForm } from "@/lib/scan/use-run-scan-form";
 import { RunScanButton } from "@/components/run-scan-button";
 import { ScanStatus } from "@/components/scan-status";
@@ -11,6 +13,7 @@ type Props = {
   playlistName?: string;
   showStatus?: boolean;
   className?: string;
+  onSuccess?: () => void;
 };
 
 export const RunScanForm = ({
@@ -18,9 +21,18 @@ export const RunScanForm = ({
   playlistId,
   playlistName,
   showStatus = true,
-  className
+  className,
+  onSuccess
 }: Props) => {
-  const { formAction } = useRunScanForm();
+  const { formAction, state } = useRunScanForm();
+  const lastStatus = useRef(state.status);
+
+  useEffect(() => {
+    if (lastStatus.current !== "success" && state.status === "success") {
+      onSuccess?.();
+    }
+    lastStatus.current = state.status;
+  }, [onSuccess, state.status]);
 
   return (
     <form
