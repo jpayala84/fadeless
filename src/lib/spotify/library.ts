@@ -10,6 +10,7 @@ export type LibraryOverview = {
   savedAlbumsCount: number;
   playlists: PlaylistSummary[];
   followedArtists: ArtistSummary[];
+  followedArtistsAvailable: boolean;
   savedAlbums: AlbumSummary[];
 };
 
@@ -23,17 +24,20 @@ export const getLibraryOverview = async (
       likedSongsCount,
       savedAlbumsCount,
       playlists,
-      followedArtists,
       recentPlaylists,
       savedAlbums
     ] = await Promise.all([
       client.fetchLikedTracksTotal(accessToken).catch(() => 0),
       client.fetchSavedAlbumsTotal(accessToken).catch(() => 0),
       client.fetchPlaylistSummaries(accessToken).catch(() => []),
-      client.fetchFollowedArtists(accessToken).catch(() => []),
       client.fetchRecentlyPlayedPlaylists(accessToken).catch(() => []),
       client.fetchSavedAlbums(accessToken).catch(() => [])
     ]);
+    let followedArtistsAvailable = true;
+    const followedArtists = await client.fetchFollowedArtists(accessToken).catch(() => {
+      followedArtistsAvailable = false;
+      return [];
+    });
 
     const orderMap = new Map<string, number>();
     recentPlaylists.forEach((id, index) => {
@@ -60,6 +64,7 @@ export const getLibraryOverview = async (
       savedAlbumsCount,
       playlists: orderedPlaylists,
       followedArtists,
+      followedArtistsAvailable,
       savedAlbums
     };
   });

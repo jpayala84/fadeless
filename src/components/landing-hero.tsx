@@ -26,7 +26,7 @@ export const LandingHero = ({ authError, errorId }: LandingHeroProps) => (
           <p className="mt-1">
             Spotify requires apps in development mode to be allowlisted. If you can’t sign in, request access and I’ll add you.
           </p>
-          <div className="mt-3 flex flex-wrap gap-3">
+          <div className="mt-3 flex flex-wrap justify-center gap-3">
             <Link
               href={getAccessRequestUrl()}
               target="_blank"
@@ -34,12 +34,6 @@ export const LandingHero = ({ authError, errorId }: LandingHeroProps) => (
               className="inline-flex h-10 items-center justify-center rounded-full bg-emerald-500 px-4 text-sm font-medium text-emerald-950 transition hover:bg-emerald-400"
             >
               Request access
-            </Link>
-            <Link
-              href="/api/auth/login"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-border/50 bg-transparent px-4 text-sm font-medium text-foreground transition hover:bg-secondary/60"
-            >
-              Try sign in again
             </Link>
           </div>
         </div>

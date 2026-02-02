@@ -13,6 +13,7 @@ type Props = {
   savedAlbumsCount: number;
   playlists: PlaylistSummary[];
   followedArtists: ArtistSummary[];
+  followedArtistsAvailable?: boolean;
   savedAlbums: AlbumSummary[];
   monitoredPlaylists?: Record<string, boolean>;
   playlistBadgeCounts?: Record<string, number>;
@@ -31,6 +32,7 @@ export const LibraryPanel = ({
   savedAlbumsCount,
   playlists,
   followedArtists,
+  followedArtistsAvailable = true,
   savedAlbums,
   monitoredPlaylists = {},
   playlistBadgeCounts = {},
@@ -381,9 +383,20 @@ export const LibraryPanel = ({
             </a>
           ))}
           {followedArtists.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              You are not following any artists on Spotify yet.
-            </p>
+            <div className="rounded-2xl border border-border/40 bg-card/30 px-4 py-6 text-sm text-muted-foreground">
+              {followedArtistsAvailable ? (
+                "You are not following any artists on Spotify yet."
+              ) : (
+                <>
+                  <p className="text-base font-semibold text-foreground">
+                    Unable to load followed artists
+                  </p>
+                  <p className="mt-1">
+                    This requires Spotify’s follow permission. Sign out and back in to grant access.
+                  </p>
+                </>
+              )}
+            </div>
           ) : null}
         </div>
       ) : null}

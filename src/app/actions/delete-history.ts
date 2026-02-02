@@ -10,20 +10,29 @@ type DeleteHistoryState =
   | { status: "success" }
   | { status: "error"; message: string };
 
-export const deleteHistoryAction = async (_formData: FormData): Promise<void> => {
+export const deleteHistoryAction = async (
+  _prevState: DeleteHistoryState,
+  _formData: FormData
+): Promise<DeleteHistoryState> => {
   const user = await getCurrentUser();
   if (!user) {
-    return;
+    return { status: "error", message: "You must be signed in." };
   }
 
-  await prisma.$transaction([
-    prisma.removalEvent.deleteMany({
-      where: { userId: user.id }
-    }),
-    prisma.snapshot.deleteMany({
-      where: { userId: user.id }
-    })
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.removalEvent.deleteMany({
+        where: { userId: user.id }
+      }),
+      prisma.snapshot.deleteMany({
+        where: { userId: user.id }
+      })
+    ]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete history.";
+    return { status: "error", message };
+  }
 
   revalidatePath("/", "page");
+  return { status: "success" };
 };

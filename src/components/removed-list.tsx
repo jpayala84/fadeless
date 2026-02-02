@@ -10,11 +10,11 @@ type Props = {
   emptyMessage: string;
 };
 
-const formatDate = (value: Date) =>
+const formatDate = (value: Date | string) =>
   new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric"
-  }).format(value);
+  }).format(typeof value === "string" ? new Date(value) : value);
 
 export const RemovedList = ({ title, events, emptyMessage }: Props) => (
   <section className="surface-card space-y-5 rounded-3xl border border-border/40 bg-card/50 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur">

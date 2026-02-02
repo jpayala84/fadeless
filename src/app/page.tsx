@@ -246,6 +246,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
                 savedAlbumsCount={library.savedAlbumsCount}
                 playlists={library.playlists}
                 followedArtists={library.followedArtists}
+                followedArtistsAvailable={library.followedArtistsAvailable}
                 savedAlbums={library.savedAlbums}
                 monitoredPlaylists={monitoredPlaylists}
                 playlistBadgeCounts={playlistBadgeCounts}
