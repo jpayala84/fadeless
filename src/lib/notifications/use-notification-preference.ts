@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useFormState } from "react-dom";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 import {
@@ -12,7 +11,7 @@ import {
 const INITIAL_STATE: NotificationPreferenceState = { status: "idle" };
 
 export const useNotificationPreferenceForm = () => {
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     updateNotificationPreference,
     INITIAL_STATE
   );

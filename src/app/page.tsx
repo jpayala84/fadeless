@@ -25,23 +25,25 @@ import type { PageSearchParams } from "@/lib/dashboard/types";
 import { getLandingAuthError } from "@/lib/marketing/access-request";
 
 type PageProps = {
-  searchParams?: PageSearchParams;
+  searchParams?: Promise<PageSearchParams>;
 };
 
 const HomePage = async ({ searchParams }: PageProps) => {
+  const resolvedSearchParams = await searchParams;
   const user = await getCurrentUser();
-  const themeCookie = cookies().get("theme")?.value === "light" ? "light" : "dark";
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("theme")?.value === "light" ? "light" : "dark";
 
   if (!user) {
-    const authError = getLandingAuthError(searchParams);
+    const authError = getLandingAuthError(resolvedSearchParams);
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <LandingHero authError={authError} errorId={searchParams?.errorId} />
+        <LandingHero authError={authError} errorId={resolvedSearchParams?.errorId} />
       </main>
     );
   }
 
-  const buildHref = makeBuildHref(searchParams);
+  const buildHref = makeBuildHref(resolvedSearchParams);
   const {
     view,
     playlistPage,
@@ -66,7 +68,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
     playlistLastRemovedAt,
     trackedPlaylistNameById,
     affectedPlaylistPreview
-  } = await loadDashboardData({ user, searchParams, buildHref });
+  } = await loadDashboardData({ user, searchParams: resolvedSearchParams, buildHref });
 
   const weeklyAcknowledged = weekly;
   const allAcknowledged = all;

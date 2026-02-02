@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState, useEffect } from "react";
+import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
 import { useDeleteHistoryForm } from "@/lib/settings/use-delete-history-form";
@@ -32,7 +32,7 @@ const DeleteButton = () => {
 
 export const DeleteHistoryForm = ({ action }: Props) => {
   const { confirmDelete } = useDeleteHistoryForm();
-  const [state, formAction] = useFormState(action, { status: "idle" } as const);
+  const [state, formAction] = useActionState(action, { status: "idle" } as const);
   const errorMessage = state.status === "error" ? state.message : null;
 
   useEffect(() => {

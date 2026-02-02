@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useFormState } from "react-dom";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 import {
@@ -12,7 +11,7 @@ import {
 const INITIAL_STATE: SendTestDigestState = { status: "idle" };
 
 export const useDevEmailTestForm = () => {
-  const [state, formAction] = useFormState(sendTestDigest, INITIAL_STATE);
+  const [state, formAction] = useActionState(sendTestDigest, INITIAL_STATE);
 
   useEffect(() => {
     if (state.status === "sent") {

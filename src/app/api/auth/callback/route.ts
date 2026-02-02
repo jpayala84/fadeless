@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     return redirectWithError(env, 'invalid_request');
   }
 
-  const pkce = readPkceValues();
+  const pkce = await readPkceValues();
   if (!pkce || pkce.state !== state) {
     return redirectWithError(env, 'state_mismatch');
   }

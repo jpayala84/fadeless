@@ -44,10 +44,11 @@ const parseSessionCookie = (cookieValue: string | undefined) => {
 
 export const establishSession = async (userId: string) => {
   const session = await createSession({ userId, ttlHours: SESSION_TTL_HOURS });
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
+  const headerStore = await headers();
   cookieStore.set(SESSION_COOKIE, serializeSessionCookie(session.id), {
     httpOnly: true,
-    secure: headers().get('x-forwarded-proto') === 'https',
+    secure: headerStore.get('x-forwarded-proto') === 'https',
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_TTL_HOURS * 60 * 60
@@ -55,7 +56,7 @@ export const establishSession = async (userId: string) => {
 };
 
 export const readSession = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionId = parseSessionCookie(cookieStore.get(SESSION_COOKIE)?.value);
   if (!sessionId) {
     return null;
@@ -64,7 +65,7 @@ export const readSession = async () => {
 };
 
 export const destroySession = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionId = parseSessionCookie(cookieStore.get(SESSION_COOKIE)?.value);
   if (sessionId) {
     await deleteSession(sessionId);

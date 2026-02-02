@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const env = getEnv();
   const { codeChallenge, codeVerifier, state } = createPkcePair();
-  storePkceValues({ codeVerifier, state });
+  await storePkceValues({ codeVerifier, state });
 
   const params = new URLSearchParams({
     response_type: 'code',

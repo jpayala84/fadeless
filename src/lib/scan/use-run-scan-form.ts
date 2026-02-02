@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useFormState } from "react-dom";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 import {
@@ -12,7 +11,7 @@ import {
 const INITIAL_STATE: RunScanState = { status: "idle" };
 
 export const useRunScanForm = () => {
-  const [state, formAction] = useFormState(runScanAction, INITIAL_STATE);
+  const [state, formAction] = useActionState(runScanAction, INITIAL_STATE);
 
   useEffect(() => {
     if (state.status === "success") {

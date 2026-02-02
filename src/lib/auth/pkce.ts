@@ -21,14 +21,14 @@ export const createPkcePair = () => {
   return { codeVerifier, codeChallenge, state };
 };
 
-export const storePkceValues = ({
+export const storePkceValues = async ({
   codeVerifier,
   state
 }: {
   codeVerifier: string;
   state: string;
 }) => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set(
     PKCE_COOKIE,
     JSON.stringify({
@@ -46,8 +46,8 @@ export const storePkceValues = ({
   );
 };
 
-export const readPkceValues = () => {
-  const cookieStore = cookies();
+export const readPkceValues = async () => {
+  const cookieStore = await cookies();
   const record = cookieStore.get(PKCE_COOKIE);
   if (!record) {
     return null;
