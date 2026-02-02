@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getEnv } from '@/lib/env';
 import { createPkcePair, storePkceValues } from '@/lib/auth/pkce';
+import { getSpotifyScopes } from "@/lib/spotify/scopes";
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ export async function GET() {
     redirect_uri: env.SPOTIFY_REDIRECT_URI,
     code_challenge_method: 'S256',
     code_challenge: codeChallenge,
-    scope: env.SPOTIFY_SCOPES,
+    scope: getSpotifyScopes(env),
     state
   });
 
