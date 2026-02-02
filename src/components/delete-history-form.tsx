@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { toast } from "sonner";
 
 import { useDeleteHistoryForm } from "@/lib/settings/use-delete-history-form";
 
@@ -31,20 +33,21 @@ const DeleteButton = () => {
 export const DeleteHistoryForm = ({ action }: Props) => {
   const { confirmDelete } = useDeleteHistoryForm();
   const [state, formAction] = useFormState(action, { status: "idle" } as const);
+  const errorMessage = state.status === "error" ? state.message : null;
+
+  useEffect(() => {
+    if (state.status === "success") {
+      toast.success("Deleted your scans and history.");
+    } else if (errorMessage) {
+      toast.error(errorMessage);
+    }
+  }, [state.status, errorMessage]);
 
   return (
     <div className="space-y-2">
       <form action={formAction} onSubmit={confirmDelete}>
         <DeleteButton />
       </form>
-      {state.status === "success" ? (
-        <p className="text-xs text-emerald-300">
-          Deleted. Refreshing your dashboard…
-        </p>
-      ) : null}
-      {state.status === "error" ? (
-        <p className="text-xs text-destructive">{state.message}</p>
-      ) : null}
     </div>
   );
 };

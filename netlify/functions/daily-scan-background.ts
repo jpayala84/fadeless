@@ -27,6 +27,7 @@ export const handler = (async (
       tokens: true,
       monitoredPlaylists: {
         where: { enabled: true },
+        orderBy: { updatedAt: "desc" },
         take: MAX_PLAYLISTS_PER_USER
       }
     }

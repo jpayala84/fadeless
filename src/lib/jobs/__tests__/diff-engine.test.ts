@@ -4,6 +4,7 @@ import { buildSnapshot, diffSnapshots } from "@/lib/jobs/diff-engine";
 
 describe("diffSnapshots", () => {
   it("detects removed tracks", () => {
+    const removedAt = new Date("2024-01-02T00:00:00Z");
     const previous = [
       {
         trackId: "track-1",
@@ -39,9 +40,10 @@ describe("diffSnapshots", () => {
       }
     ];
 
-    const result = diffSnapshots(previous, current);
+    const result = diffSnapshots(previous, current, { removedAt });
     expect(result.removed).toHaveLength(1);
     expect(result.removed[0].trackId).toBe("track-2");
+    expect(result.removed[0].removedAt.toISOString()).toBe(removedAt.toISOString());
   });
 });
 

@@ -9,18 +9,46 @@ export const createRemovalEventRepository = (): RemovalEventRepository => ({
       return;
     }
 
+    // Prisma's createMany(skipDuplicates) only deduplicates on unique constraints.
+    // We want idempotency per scan window:
+    // - If a track was already recorded as removed after the previous snapshot,
+    //   don't create another identical event on retries or repeated scans.
+    const candidates: RemovalRecord[] = [];
+    for (const track of removed) {
+      const existing = await prisma.removalEvent.findFirst({
+        where: {
+          userId,
+          trackId: track.trackId,
+          playlistIds: {
+            equals: track.playlistIds
+          },
+          removedAt: {
+            gt: track.capturedAt
+          }
+        },
+        select: { id: true }
+      });
+
+      if (!existing) {
+        candidates.push(track);
+      }
+    }
+
+    if (candidates.length === 0) {
+      return;
+    }
+
     await prisma.removalEvent.createMany({
-      data: removed.map((track) => ({
+      data: candidates.map((track) => ({
         userId,
         trackId: track.trackId,
         trackName: track.trackName,
-        artists: track.artists.join(', '),
+        artists: track.artists.join(", "),
         albumName: track.albumName,
         playlistIds: track.playlistIds,
         playlistNames: track.playlistNames,
         removedAt: track.removedAt
-      })),
-      skipDuplicates: true
+      }))
     });
   }
 });

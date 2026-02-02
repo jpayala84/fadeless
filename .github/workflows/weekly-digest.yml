@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Trigger digest job
         env:
-          DIGEST_ENDPOINT: https://lostrack.netlify.app/api/jobs/send-weekly-digest
+          DIGEST_ENDPOINT: https://fadeless.app/api/jobs/send-weekly-digest
         run: |
           echo "Triggering weekly digest at $DIGEST_ENDPOINT"
           curl -s -X POST "$DIGEST_ENDPOINT"

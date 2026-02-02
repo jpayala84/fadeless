@@ -45,14 +45,19 @@ export type RemovalEventRepository = {
 
 export const diffSnapshots = (
   previous: TrackSnapshot[],
-  current: TrackSnapshot[]
+  current: TrackSnapshot[],
+  options?: { removedAt?: Date }
 ): DiffResult => {
+  const removedAt =
+    options?.removedAt ??
+    current[0]?.capturedAt ??
+    new Date();
   const currentIndex = new Map(current.map((track) => [track.trackId, track]));
   const removed = previous
     .filter((track) => !currentIndex.has(track.trackId))
     .map<RemovalRecord>((track) => ({
       ...track,
-      removedAt: new Date()
+      removedAt
     }));
 
   return {

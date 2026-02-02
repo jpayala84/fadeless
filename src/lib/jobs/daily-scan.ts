@@ -65,7 +65,7 @@ export const runDailyScan = async (
     const diff =
       previousSnapshot.length === 0
         ? { removed: [], potentialReplacements: [] }
-        : diffSnapshots(previousSnapshot, currentSnapshotData);
+        : diffSnapshots(previousSnapshot, currentSnapshotData, { removedAt: now });
     if (diff.removed.length > 0) {
       await removalEvents.record(userId, diff.removed);
     }
