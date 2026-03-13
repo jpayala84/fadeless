@@ -2097,13 +2097,20 @@ nextjs-portal {
 
 :is(.theme-neon, .theme-dark) .mobile-liked-card {
   border-color: rgba(214, 226, 255, 0.4) !important;
-  box-shadow: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 20px rgba(0, 0, 0, 0.24),
+    0 0 14px rgba(72, 240, 178, 0.12) !important;
 }
 
 @media (hover: hover) {
   :is(.theme-neon, .theme-dark) .mobile-liked-card:hover {
-    border-color: rgba(214, 226, 255, 0.4) !important;
-    box-shadow: none !important;
+    border-color: rgba(126, 228, 194, 0.76) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 0 1px rgba(72, 240, 178, 0.15),
+      0 10px 22px rgba(0, 0, 0, 0.26),
+      0 0 16px rgba(72, 240, 178, 0.15) !important;
   }
 }
 
@@ -2113,6 +2120,10 @@ nextjs-portal {
   :focus-within,
   :active
 ) {
-  border-color: rgba(214, 226, 255, 0.4) !important;
-  box-shadow: none !important;
+  border-color: rgba(126, 228, 194, 0.76) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(72, 240, 178, 0.15),
+    0 10px 22px rgba(0, 0, 0, 0.26),
+    0 0 16px rgba(72, 240, 178, 0.15) !important;
 }
