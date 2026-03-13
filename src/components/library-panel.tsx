@@ -89,7 +89,7 @@ export const LibraryPanel = ({
     <section
       className={cn(
         "surface-card neon-row-card mobile-library-shell no-neon-interaction space-y-5 rounded-3xl border border-emerald-200/20 bg-card/50 p-6",
-        mobileSection === "removals" ? "hidden lg:block" : ""
+        mobileSection === "removals" ? "hidden md:block" : ""
       )}
       aria-busy={isNavigating}
     >
@@ -415,7 +415,7 @@ export const LibraryPanel = ({
         </div>
       ) : null}
     </section>
-    <nav className="mobile-bottom-nav lg:hidden" aria-label="Mobile navigation">
+    <nav className="mobile-bottom-nav md:hidden" aria-label="Mobile navigation">
       <Link
         href={mobileRemovalsHref}
         className={cn("mobile-bottom-link", mobileSection === "removals" ? "is-active" : "")}

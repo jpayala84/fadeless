@@ -119,7 +119,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
         </div>
       ) : null}
       {!trackTableData && view !== "settings" ? (
-        <div className="hidden px-6 pt-6 lg:block">
+        <div className="hidden px-6 pt-6 md:block">
           <div className="neon-main-tabs dashboard-tab-strip flex flex-wrap items-center gap-2 rounded-3xl bg-card/30 p-3 shadow-inner backdrop-blur">
             {tabs.map((tab) => (
               <Link
@@ -140,7 +140,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
         </div>
       ) : null}
       {!trackTableData && view !== "settings" && mobileSection === "removals" ? (
-        <div className="px-4 pt-4 lg:hidden">
+        <div className="px-4 pt-4 md:hidden">
           <div className="dashboard-tab-strip mobile-removal-tab-strip flex w-full items-center gap-2 pb-1">
             {mobileHistoryTabs.map((tab) => (
               <Link
@@ -165,12 +165,12 @@ const HomePage = async ({ searchParams }: PageProps) => {
         className={`dashboard-content-grid px-4 py-6 lg:px-6 lg:py-10 ${
           view === "settings"
             ? "settings-content mx-auto w-full max-w-[1420px]"
-            : "grid gap-8 lg:grid-cols-[minmax(0,2.1fr)_420px]"
+            : "grid gap-8 md:grid-cols-[minmax(0,2.1fr)_420px]"
         }`}
       >
         <section
           className={`${view === "settings" ? "" : "order-1 min-w-0 "}space-y-6 ${
-            view !== "settings" && mobileSection === "library" ? "hidden lg:block" : ""
+            view !== "settings" && mobileSection === "library" ? "hidden md:block" : ""
           }`}
         >
           {trackTableData ? (
