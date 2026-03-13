@@ -16,8 +16,6 @@ import type { LibraryPanelTabId } from "@/lib/dashboard/library-tabs";
 const PLAYLISTS_PER_PAGE = 5;
 
 type Options = {
-  likedSongsCount: number;
-  savedAlbumsCount: number;
   playlists: PlaylistSummary[];
   followedArtists: ArtistSummary[];
   savedAlbums: AlbumSummary[];
@@ -25,10 +23,6 @@ type Options = {
   playlistBadgeCounts: Record<string, number>;
   likedBadgeCount: number;
   badgePollingEnabled: boolean;
-  activeCollection?: {
-    type?: "playlist" | "liked" | "album";
-    id?: string;
-  };
   page: number;
   preferredPanel?: LibraryPanelTabId;
 };
@@ -41,7 +35,6 @@ export const useLibraryPanelState = ({
   playlistBadgeCounts,
   likedBadgeCount,
   badgePollingEnabled,
-  activeCollection,
   page,
   preferredPanel
 }: Options) => {
@@ -49,6 +42,7 @@ export const useLibraryPanelState = ({
   const searchParams = useSearchParams();
   const [badgeCountsState, setBadgeCountsState] = useState(playlistBadgeCounts);
   const [likedBadgeCountState, setLikedBadgeCountState] = useState(likedBadgeCount);
+  const [monitorState, setMonitorState] = useState(monitoredPlaylists);
   const [activePanel, setActivePanel] = useState<LibraryPanelTabId>(
     preferredPanel ?? "playlists"
   );
@@ -71,9 +65,13 @@ export const useLibraryPanelState = ({
     }
   }, [preferredPanel]);
 
+  useEffect(() => {
+    setMonitorState(monitoredPlaylists);
+  }, [monitoredPlaylists]);
+
   const enabledMonitorCount = useMemo(
-    () => Object.values(monitoredPlaylists).filter(Boolean).length,
-    [monitoredPlaylists]
+    () => Object.values(monitorState).filter(Boolean).length,
+    [monitorState]
   );
 
   const orderedPlaylists = useMemo(() => {
@@ -81,7 +79,7 @@ export const useLibraryPanelState = ({
       .map((playlist, index) => ({
         playlist,
         index,
-        tracked: monitoredPlaylists[playlist.id] ?? false
+        tracked: monitorState[playlist.id] ?? false
       }))
       .sort((a, b) => {
         if (a.tracked !== b.tracked) {
@@ -90,7 +88,7 @@ export const useLibraryPanelState = ({
         return a.index - b.index;
       })
       .map((item) => item.playlist);
-  }, [playlists, monitoredPlaylists]);
+  }, [playlists, monitorState]);
 
   const totalPages = Math.max(
     1,
@@ -149,6 +147,11 @@ export const useLibraryPanelState = ({
 
   const toggleMonitor = useCallback(
     (playlist: PlaylistSummary, nextEnabled: boolean) => {
+      setMonitorState((current) => ({
+        ...current,
+        [playlist.id]: nextEnabled
+      }));
+
       startMonitorTransition(async () => {
         const result = await togglePlaylistMonitoring({
           playlistId: playlist.id,
@@ -156,9 +159,17 @@ export const useLibraryPanelState = ({
           enabled: nextEnabled
         });
         if (result.status === "error") {
+          setMonitorState((current) => ({
+            ...current,
+            [playlist.id]: !nextEnabled
+          }));
           toast.error(result.message);
           return;
         }
+        setMonitorState((current) => ({
+          ...current,
+          [playlist.id]: result.enabled
+        }));
         toast.success(
           result.enabled ? `Tracking ${playlist.name}` : `Stopped tracking ${playlist.name}`
         );
@@ -172,7 +183,6 @@ export const useLibraryPanelState = ({
       return;
     }
 
-    let interval: ReturnType<typeof setInterval> | undefined;
     let cancelled = false;
 
     const pollBadges = async () => {
@@ -197,13 +207,11 @@ export const useLibraryPanelState = ({
     };
 
     pollBadges();
-    interval = setInterval(pollBadges, 15000);
+    const interval = setInterval(pollBadges, 15000);
 
     return () => {
       cancelled = true;
-      if (interval) {
-        clearInterval(interval);
-      }
+      clearInterval(interval);
     };
   }, [badgePollingEnabled]);
 
@@ -227,6 +235,7 @@ export const useLibraryPanelState = ({
     pendingMonitor,
     enabledMonitorCount,
     visiblePlaylists,
+    monitorState,
     setActivePanel,
     changePage,
     viewCollection,

@@ -41,7 +41,7 @@ export const handler = (async (event) => {
       statusCode: 202,
       body: text || "scheduled"
     };
-  } catch (error) {
+  } catch {
     console.error("[daily-scan] failed to trigger background scan");
     return {
       statusCode: 500,
@@ -49,4 +49,3 @@ export const handler = (async (event) => {
     };
   }
 }) satisfies Handler;
-

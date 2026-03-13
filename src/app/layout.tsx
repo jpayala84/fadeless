@@ -16,8 +16,11 @@ type RootLayoutProps = Readonly<{
 
 const RootLayout = async ({ children }: RootLayoutProps) => {
   const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("theme")?.value;
   const theme =
-    cookieStore.get('theme')?.value === 'light' ? 'theme-light' : 'theme-dark';
+    themeCookie === "light"
+      ? "theme-light"
+      : "theme-dark";
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={theme}>

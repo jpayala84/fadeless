@@ -1,7 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { Home, Music2, SquarePlay, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 
+import { SpotifyMarkIcon } from "@/components/auth-buttons";
 import { RunScanForm } from "@/components/run-scan-form";
 import type { AlbumSummary, ArtistSummary, PlaylistSummary } from "@/lib/spotify/client";
 import { cn } from "@/lib/utils";
@@ -25,6 +29,9 @@ type Props = {
   };
   page?: number;
   preferredPanel?: "playlists" | "artists" | "albums";
+  mobileSection?: "library" | "removals";
+  mobileRemovalsHref?: string;
+  mobileLibraryHref?: string;
 };
 
 export const LibraryPanel = ({
@@ -40,8 +47,12 @@ export const LibraryPanel = ({
   badgePollingEnabled = false,
   activeCollection,
   page = 0,
-  preferredPanel
+  preferredPanel,
+  mobileSection = "library",
+  mobileRemovalsHref = "/?mobileSection=removals",
+  mobileLibraryHref = "/?mobileSection=library"
 }: Props) => {
+  const router = useRouter();
   const {
     badgeCountsState,
     likedBadgeCountState,
@@ -51,6 +62,7 @@ export const LibraryPanel = ({
     pendingMonitor,
     enabledMonitorCount,
     visiblePlaylists,
+    monitorState,
     setActivePanel,
     changePage,
     viewCollection,
@@ -61,8 +73,6 @@ export const LibraryPanel = ({
     clearLikedBadgeNow,
     clearPlaylistBadgeNow
   } = useLibraryPanelState({
-    likedSongsCount,
-    savedAlbumsCount,
     playlists,
     followedArtists,
     savedAlbums,
@@ -70,14 +80,17 @@ export const LibraryPanel = ({
     playlistBadgeCounts,
     likedBadgeCount,
     badgePollingEnabled,
-    activeCollection,
     page,
     preferredPanel
   });
 
   return (
+    <>
     <section
-      className="surface-card space-y-5 rounded-3xl border border-border/40 bg-card/50 p-6 backdrop-blur"
+      className={cn(
+        "surface-card neon-row-card mobile-library-shell no-neon-interaction space-y-5 rounded-3xl border border-emerald-200/20 bg-card/50 p-6",
+        mobileSection === "removals" ? "hidden lg:block" : ""
+      )}
       aria-busy={isNavigating}
     >
       <div
@@ -86,9 +99,9 @@ export const LibraryPanel = ({
         onClick={() => viewCollection("liked")}
         onKeyDown={(event) => handleKeyActivate(event, () => viewCollection("liked"))}
         className={cn(
-          "relative w-full min-h-[92px] rounded-3xl border border-border/40 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400",
+          "mobile-liked-card neon-row-card relative w-full min-h-[92px] rounded-3xl border border-emerald-200/20 bg-card/40 p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/40",
           activeCollection?.type === "liked"
-            ? "border-emerald-400/50 bg-emerald-400/10"
+            ? "bg-card/55"
             : ""
         )}
       >
@@ -102,7 +115,7 @@ export const LibraryPanel = ({
         ) : null}
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-emerald-300">
+            <p className="text-xs uppercase tracking-[0.35em] text-green-500">
               Liked Songs
             </p>
             <p className="text-3xl font-semibold">
@@ -119,18 +132,19 @@ export const LibraryPanel = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="hidden flex-wrap items-center gap-2 lg:flex">
         {LIBRARY_PANEL_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActivePanel(tab.id)}
             className={cn(
-              "rounded-full border px-4 py-1.5 text-sm transition",
+              "neon-chip rounded-full border px-4 py-1.5 text-sm transition",
               activePanel === tab.id
                 ? "border-emerald-400/50 bg-emerald-400/10 text-foreground"
-                : "border-border/40 text-muted-foreground hover:text-foreground"
+                : "border-emerald-200/20 text-muted-foreground hover:text-foreground hover:border-emerald-200/30"
             )}
+            data-active={activePanel === tab.id}
           >
             {tab.label}
           </button>
@@ -147,7 +161,7 @@ export const LibraryPanel = ({
               type="button"
               onClick={() => changePage(currentPage - 1)}
               disabled={currentPage === 0}
-              className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
+              className="library-pager-btn neon-chip neon-soft-hover rounded-full border border-emerald-200/20 px-2 py-1 disabled:opacity-70"
               aria-label="Previous playlists"
             >
               ‹
@@ -159,7 +173,7 @@ export const LibraryPanel = ({
               type="button"
               onClick={() => changePage(currentPage + 1)}
               disabled={currentPage >= totalPages - 1}
-              className="rounded-full border border-border/30 px-2 py-1 disabled:opacity-30"
+              className="library-pager-btn neon-chip neon-soft-hover rounded-full border border-emerald-200/20 px-2 py-1 disabled:opacity-70"
               aria-label="Next playlists"
             >
               ›
@@ -170,16 +184,16 @@ export const LibraryPanel = ({
               const isActive =
                 activeCollection?.type === "playlist" &&
                 activeCollection.id === playlist.id;
-              const isTracked = monitoredPlaylists[playlist.id] ?? false;
+              const isTracked = monitorState[playlist.id] ?? false;
               const badgeCount = badgeCountsState[playlist.id] ?? 0;
               return (
                 <li
                   key={playlist.id}
                   className={cn(
-                    "relative min-h-[92px] cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
+                    "neon-row-card mobile-playlist-card relative min-h-[92px] cursor-pointer rounded-2xl border px-4 py-3 text-sm shadow-inner shadow-black/30 transition",
                     isActive
                       ? "border-emerald-400/50 bg-emerald-400/10"
-                      : "border-border/40 bg-card/30 hover:border-emerald-300/40"
+                      : "border-emerald-200/20 bg-card/30 hover:border-emerald-200/30"
                   )}
                   onClick={() => handlePlaylistFocus(playlist.id, playlist.name)}
                 >
@@ -227,10 +241,10 @@ export const LibraryPanel = ({
                           onClick={() => toggleMonitor(playlist, !isTracked)}
                           disabled={pendingMonitor || (!isTracked && enabledMonitorCount >= 5)}
                           className={cn(
-                            "rounded-full border px-3 py-1 text-[0.65rem] transition",
+                            "neon-chip neon-soft-hover rounded-full border px-3 py-1 text-[0.65rem] transition",
                             isTracked
-                              ? "border-emerald-400/50 text-emerald-300 hover:bg-emerald-400/10"
-                              : "border-border/40 text-muted-foreground hover:text-foreground",
+                              ? "border-emerald-400/50 text-emerald-300 hover:border-emerald-300/70"
+                              : "border-emerald-200/20 text-muted-foreground hover:text-foreground hover:border-emerald-200/30",
                             pendingMonitor || (!isTracked && enabledMonitorCount >= 5)
                               ? "opacity-40 cursor-not-allowed"
                               : ""
@@ -287,10 +301,10 @@ export const LibraryPanel = ({
                   role="button"
                   tabIndex={0}
                   className={cn(
-                    "min-h-[92px] flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-inner transition",
+                    "neon-row-card min-h-[92px] flex items-center gap-3 rounded-2xl border p-3 text-sm shadow-inner transition",
                     isActive
                       ? "border-emerald-400/70 bg-emerald-400/10"
-                      : "border-border/40 bg-card/30 hover:border-emerald-300/40"
+                      : "border-emerald-200/20 bg-card/30 hover:border-emerald-200/30"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -355,7 +369,7 @@ export const LibraryPanel = ({
               href={`https://open.spotify.com/artist/${artist.id}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/30 p-3 text-sm transition hover:border-emerald-300/40"
+              className="neon-row-card flex items-center gap-3 rounded-2xl border border-emerald-200/20 bg-card/30 p-3 text-sm transition hover:border-emerald-200/30"
             >
               {artist.imageUrl ? (
                 <Image
@@ -383,7 +397,7 @@ export const LibraryPanel = ({
             </a>
           ))}
           {followedArtists.length === 0 ? (
-            <div className="rounded-2xl border border-border/40 bg-card/30 px-4 py-6 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-emerald-200/20 bg-card/30 px-4 py-6 text-sm text-muted-foreground">
               {followedArtistsAvailable ? (
                 "You are not following any artists on Spotify yet."
               ) : (
@@ -401,5 +415,74 @@ export const LibraryPanel = ({
         </div>
       ) : null}
     </section>
+    <nav className="mobile-bottom-nav lg:hidden" aria-label="Mobile navigation">
+      <Link
+        href={mobileRemovalsHref}
+        className={cn("mobile-bottom-link", mobileSection === "removals" ? "is-active" : "")}
+      >
+        <Home className="h-5 w-5" />
+        <span>Home</span>
+      </Link>
+      <button
+        type="button"
+        onClick={() => {
+          setActivePanel("playlists");
+          if (mobileSection !== "library") {
+            router.push(mobileLibraryHref);
+          }
+        }}
+        className={cn(
+          "mobile-bottom-link",
+          mobileSection === "library" && activePanel === "playlists" ? "is-active" : ""
+        )}
+      >
+        <Music2 className="h-5 w-5" />
+        <span>Playlists</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setActivePanel("artists");
+          if (mobileSection !== "library") {
+            router.push(mobileLibraryHref);
+          }
+        }}
+        className={cn(
+          "mobile-bottom-link",
+          mobileSection === "library" && activePanel === "artists" ? "is-active" : ""
+        )}
+      >
+        <Users className="h-5 w-5" />
+        <span>Artists</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setActivePanel("albums");
+          if (mobileSection !== "library") {
+            router.push(mobileLibraryHref);
+          }
+        }}
+        className={cn(
+          "mobile-bottom-link",
+          mobileSection === "library" && activePanel === "albums" ? "is-active" : ""
+        )}
+      >
+        <SquarePlay className="h-5 w-5" />
+        <span>Albums</span>
+      </button>
+      <a
+        href="https://open.spotify.com"
+        target="_blank"
+        rel="noreferrer"
+        className="mobile-bottom-link mobile-bottom-link--spotify"
+      >
+        <span className="flex h-5 w-5 items-center justify-center">
+          <SpotifyMarkIcon className="h-[0.92rem] w-[0.92rem]" />
+        </span>
+        <span>Spotify</span>
+      </a>
+    </nav>
+    </>
   );
 };

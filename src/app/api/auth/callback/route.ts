@@ -16,7 +16,11 @@ export async function GET(request: Request) {
   const env = getEnv();
   const { searchParams } = new URL(request.url);
   const error = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
   if (error) {
+    if (isAllowlistError(error, errorDescription)) {
+      return redirectWithError(env, "not_allowlisted");
+    }
     return redirectWithError(env, error);
   }
 
@@ -86,4 +90,19 @@ const inferAuthFailureReason = (error: unknown) => {
   if (/Prisma/i.test(message)) return 'db_error';
 
   return 'unknown';
+};
+
+const isAllowlistError = (error: string, errorDescription: string | null) => {
+  if (error !== "access_denied") {
+    return false;
+  }
+
+  const description = (errorDescription ?? "").toLowerCase();
+  return (
+    description.includes("development mode") ||
+    description.includes("not registered") ||
+    description.includes("test user") ||
+    description.includes("allow list") ||
+    description.includes("allowlisted")
+  );
 };

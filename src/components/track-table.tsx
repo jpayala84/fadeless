@@ -63,7 +63,7 @@ export const TrackTable = ({
       {backHref ? (
         <Link
           href={backHref}
-          className="rounded-full border border-border/40 bg-card/30 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
+          className="neon-soft-hover rounded-full border border-border/40 bg-card/30 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
         >
           ← Back to dashboard
         </Link>
@@ -160,7 +160,7 @@ export const TrackTable = ({
         <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground sm:justify-start">
           <a
             href={pagination.prevHref ?? "#"}
-            className={`rounded-full border border-border/40 px-3 py-1 ${
+            className={`neon-soft-hover rounded-full border border-border/40 px-3 py-1 ${
               pagination.prevHref
                 ? "hover:text-foreground"
                 : "pointer-events-none opacity-30"
@@ -173,7 +173,7 @@ export const TrackTable = ({
           </span>
           <a
             href={pagination.nextHref ?? "#"}
-            className={`rounded-full border border-border/40 px-3 py-1 ${
+            className={`neon-soft-hover rounded-full border border-border/40 px-3 py-1 ${
               pagination.nextHref
                 ? "hover:text-foreground"
                 : "pointer-events-none opacity-30"
@@ -190,7 +190,7 @@ export const TrackTable = ({
           href={footerCta.href}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center justify-center rounded-full border border-border/40 bg-card/40 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
+          className="neon-soft-hover inline-flex items-center justify-center rounded-full border border-border/40 bg-card/40 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
         >
           {footerCta.label}
         </a>

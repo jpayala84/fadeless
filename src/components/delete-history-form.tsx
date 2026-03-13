@@ -23,7 +23,7 @@ const DeleteButton = () => {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500/80 disabled:opacity-60"
+      className="settings-danger-btn w-auto rounded-full border border-rose-300/60 bg-transparent px-6 py-2 text-[1rem] font-medium text-rose-100 transition disabled:opacity-60"
     >
       {pending ? "Deleting…" : "Delete my data"}
     </button>

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import type { ReactNode } from "react";
+import { AlertTriangle, Archive, Bell, Clock, Download, ListMusic, MoonStar, Palette, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,21 +20,36 @@ import { ReauthBanner } from "@/components/reauth-banner";
 import { DeleteHistoryForm } from "@/components/delete-history-form";
 import { PlaylistsAffected } from "@/components/playlists-affected";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { formatDate, formatTimeAgo } from "@/lib/dashboard/formatters";
 import { loadDashboardData } from "@/lib/dashboard/load-dashboard";
 import { makeBuildHref } from "@/lib/dashboard/navigation";
-import type { PageSearchParams } from "@/lib/dashboard/types";
+import type { DashboardView, PageSearchParams } from "@/lib/dashboard/types";
 import { getLandingAuthError } from "@/lib/marketing/access-request";
 
 type PageProps = {
   searchParams?: Promise<PageSearchParams>;
 };
 
+type SettingsCardProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+const SETTINGS_CARD_BASE_CLASS =
+  "surface-card settings-card space-y-4 rounded-[1.75rem] border bg-card/50 p-5 xl:p-6";
+
+const SettingsCard = ({ children, className = "" }: SettingsCardProps) => (
+  <div className={`${SETTINGS_CARD_BASE_CLASS} ${className}`.trim()}>{children}</div>
+);
+
 const HomePage = async ({ searchParams }: PageProps) => {
   const resolvedSearchParams = await searchParams;
   const user = await getCurrentUser();
   const cookieStore = await cookies();
-  const themeCookie = cookieStore.get("theme")?.value === "light" ? "light" : "dark";
+  const themeCookieValue = cookieStore.get("theme")?.value;
+  const themeCookie =
+    themeCookieValue === "light"
+      ? "light"
+      : "dark";
 
   if (!user) {
     const authError = getLandingAuthError(resolvedSearchParams);
@@ -72,9 +89,25 @@ const HomePage = async ({ searchParams }: PageProps) => {
 
   const weeklyAcknowledged = weekly;
   const allAcknowledged = all;
+  const tabIcons: Record<DashboardView, ReactNode> = {
+    weekly: <Clock className="h-4 w-4" />,
+    archive: <Archive className="h-4 w-4" />,
+    playlists: <ListMusic className="h-4 w-4" />,
+    settings: <Palette className="h-4 w-4" />
+  };
+  const mobileHistoryTabs = tabs.filter(
+    (tab) => tab.id === "weekly" || tab.id === "archive" || tab.id === "playlists"
+  );
+  const mobileSection = resolvedSearchParams?.mobileSection === "removals" ? "removals" : "library";
+  const mobileRemovalTabLabels: Record<DashboardView, string> = {
+    weekly: "This Week",
+    archive: "All Time",
+    playlists: "Playlists",
+    settings: "Settings"
+  };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className={`desktop-glass-shell min-h-screen bg-background text-foreground ${view === "settings" ? "settings-screen" : ""}`}>
       <PlaylistOnboardingDialog
         playlists={library.playlists}
         open={needsOnboarding}
@@ -85,8 +118,61 @@ const HomePage = async ({ searchParams }: PageProps) => {
           <ReauthBanner />
         </div>
       ) : null}
-      <div className="grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,2.1fr)_420px]">
-        <section className="space-y-6">
+      {!trackTableData && view !== "settings" ? (
+        <div className="hidden px-6 pt-6 lg:block">
+          <div className="neon-main-tabs dashboard-tab-strip flex flex-wrap items-center gap-2 rounded-3xl bg-card/30 p-3 shadow-inner backdrop-blur">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={buildHref({ view: tab.id === "weekly" ? undefined : tab.id })}
+                className={`history-pill inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  view === tab.id
+                    ? "is-active border-emerald-300/80 bg-emerald-500/12 text-foreground"
+                    : "border-emerald-200/25 bg-black/25 text-slate-300 hover:text-foreground"
+                }`}
+                data-active={view === tab.id}
+              >
+                {tabIcons[tab.id]}
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {!trackTableData && view !== "settings" && mobileSection === "removals" ? (
+        <div className="px-4 pt-4 lg:hidden">
+          <div className="dashboard-tab-strip mobile-removal-tab-strip flex w-full items-center gap-2 pb-1">
+            {mobileHistoryTabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={buildHref({ view: tab.id === "weekly" ? undefined : tab.id })}
+                className={`history-pill mobile-removal-pill inline-flex flex-1 items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  view === tab.id
+                    ? "is-active border-emerald-300/80 bg-emerald-500/12 text-foreground"
+                    : "border-emerald-200/25 bg-black/25 text-slate-300"
+                }`}
+                data-active={view === tab.id}
+                aria-label={tab.label}
+                title={tab.label}
+              >
+                {mobileRemovalTabLabels[tab.id]}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <div
+        className={`dashboard-content-grid px-4 py-6 lg:px-6 lg:py-10 ${
+          view === "settings"
+            ? "settings-content mx-auto w-full max-w-[1420px]"
+            : "grid gap-8 lg:grid-cols-[minmax(0,2.1fr)_420px]"
+        }`}
+      >
+        <section
+          className={`${view === "settings" ? "" : "order-1 min-w-0 "}space-y-6 ${
+            view !== "settings" && mobileSection === "library" ? "hidden lg:block" : ""
+          }`}
+        >
           {trackTableData ? (
             <TrackTable
               title={trackTableData.title}
@@ -111,24 +197,6 @@ const HomePage = async ({ searchParams }: PageProps) => {
                   initiallyCompleted={likedBaseline?.completed ?? false}
                 />
               ) : null}
-              {view !== "settings" ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {tabs.map((tab) => (
-                    <Link
-                      key={tab.id}
-                      href={buildHref({ view: tab.id === "weekly" ? undefined : tab.id })}
-                      className={`rounded-full border px-4 py-2 text-sm transition ${
-                        view === tab.id
-                          ? "border-emerald-400/50 bg-emerald-400/10 text-foreground"
-                          : "border-border/40 text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {tab.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
-              
 
               {view === "weekly" ? (
                 <RemovedList
@@ -178,63 +246,93 @@ const HomePage = async ({ searchParams }: PageProps) => {
               ) : null}
 
               {view === "settings" ? (
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6">
-                    <h2 className="text-xl font-semibold">Notification preferences</h2>
-                    <NotificationPreferenceForm
-                      enabled={user.notificationsEnabled}
-                    />
-                  </div>
-                  {isLocalEnv ? (
-                    <div className="surface-card space-y-4 rounded-3xl border border-emerald-400/20 bg-card/50 p-6">
-                      <DevEmailTestPanel />
-                    </div>
-                  ) : null}
-                  <div className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6">
-                    <h2 className="text-xl font-semibold">Appearance</h2>
-                    <ThemeToggle currentTheme={themeCookie} />
-                  </div>
-                  <div className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6">
-                    <h2 className="text-xl font-semibold">Legal</h2>
-                    <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                      <a
-                        href="/privacy"
-                        className="underline-offset-4 transition hover:text-foreground hover:underline"
-                      >
-                        Privacy Policy
-                      </a>
-                      <a
-                        href="/terms"
-                        className="underline-offset-4 transition hover:text-foreground hover:underline"
-                      >
-                        Terms of Service
-                      </a>
-                    </div>
-                  </div>
-                  <div className="space-y-4 rounded-3xl border border-red-500/30 bg-red-500/5 p-6 shadow-inner">
-                    <h2 className="text-xl font-semibold text-red-200">Danger zone</h2>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/40 px-4 py-2 text-sm text-muted-foreground">
-                        Export removal archive
-                        <span className="text-xs text-muted-foreground">JSON / CSV</span>
+                <div className="settings-page settings-grid grid gap-4 lg:grid-cols-2 lg:gap-5">
+                  <div className="settings-column space-y-4 lg:space-y-5">
+                    <SettingsCard className="border-border/50">
+                      <div className="settings-card-title settings-section-heading flex items-center gap-3 font-medium tracking-tight">
+                        <MoonStar className="settings-section-icon h-[1.35rem] w-[1.35rem] text-emerald-200" />
+                        Appearance
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="settings-divider" />
+                      <ThemeToggle currentTheme={themeCookie} />
+                    </SettingsCard>
+
+                    <SettingsCard className="settings-card--primary border-border/50">
+                      <div className="settings-card-title settings-section-heading flex items-center gap-3 font-medium tracking-tight">
+                        <Bell className="settings-section-icon h-[1.35rem] w-[1.35rem] text-emerald-200" />
+                        Notification Preferences
+                      </div>
+                      <div className="settings-divider" />
+                      <NotificationPreferenceForm
+                        enabled={user.notificationsEnabled}
+                      />
+                    </SettingsCard>
+
+                    {isLocalEnv ? (
+                      <SettingsCard className="settings-card--primary border-emerald-400/25">
+                        <DevEmailTestPanel />
+                      </SettingsCard>
+                    ) : null}
+                  </div>
+
+                  <div className="settings-column space-y-4 lg:space-y-5">
+                    <SettingsCard className="border-border/50">
+                      <div className="settings-card-title settings-section-heading flex items-center gap-3 font-medium tracking-tight">
+                        <ShieldCheck className="settings-section-icon h-[1.35rem] w-[1.35rem] text-emerald-200" />
+                        Legal
+                      </div>
+                      <div className="settings-divider" />
+                      <div className="settings-legal-links flex flex-col gap-2 text-[1rem] text-muted-foreground">
+                        <a
+                          href="/privacy"
+                          className="transition hover:text-foreground"
+                        >
+                          Privacy Policy
+                        </a>
+                        <a
+                          href="/terms"
+                          className="transition hover:text-foreground"
+                        >
+                          Terms of Service
+                        </a>
+                      </div>
+                    </SettingsCard>
+
+                    <SettingsCard className="settings-card--primary border-border/50">
+                      <div className="settings-card-title settings-section-heading flex items-center gap-3 font-medium tracking-tight">
+                        <Download className="settings-section-icon h-[1.35rem] w-[1.35rem] text-emerald-200" />
+                        Data & Export
+                      </div>
+                      <div className="settings-divider" />
+                      <div className="text-[1rem] text-muted-foreground">
+                        Export removal archive
+                      </div>
+                      <div className="flex flex-wrap gap-2.5">
                         <a
                           href="/api/exports/removals?format=json"
-                          className="inline-flex items-center justify-center rounded-full border border-border/40 bg-card/40 px-4 py-2 text-xs text-muted-foreground transition hover:text-foreground"
+                          className="settings-pill-btn neon-chip inline-flex items-center justify-center rounded-full border border-emerald-300/55 bg-transparent px-6 py-2 text-[1rem] text-foreground transition"
                         >
                           Download JSON
                         </a>
                         <a
                           href="/api/exports/removals?format=csv"
-                          className="inline-flex items-center justify-center rounded-full border border-border/40 bg-card/40 px-4 py-2 text-xs text-muted-foreground transition hover:text-foreground"
+                          className="settings-pill-btn neon-chip inline-flex items-center justify-center rounded-full border border-emerald-300/55 bg-transparent px-6 py-2 text-[1rem] text-foreground transition"
                         >
                           Download CSV
                         </a>
                       </div>
+                    </SettingsCard>
+
+                    <SettingsCard className="neon-danger border-red-500/30 bg-red-500/5 shadow-inner">
+                      <div className="settings-card-title settings-section-heading flex items-center gap-3 font-medium tracking-tight text-red-200">
+                        <AlertTriangle className="settings-section-icon h-[1.35rem] w-[1.35rem]" />
+                        Danger Zone
+                      </div>
+                      <div className="settings-divider settings-divider-danger" />
                       <DeleteHistoryForm action={deleteHistoryAction} />
-                    </div>
+                    </SettingsCard>
                   </div>
+
                 </div>
               ) : null}
             </>
@@ -242,7 +340,7 @@ const HomePage = async ({ searchParams }: PageProps) => {
         </section>
 
         {view !== "settings" ? (
-          <aside className="space-y-6">
+          <aside className="order-2 min-w-0 space-y-6 pb-0 lg:pb-0">
               <LibraryPanel
                 likedSongsCount={library.likedSongsCount}
                 savedAlbumsCount={library.savedAlbumsCount}
@@ -257,6 +355,9 @@ const HomePage = async ({ searchParams }: PageProps) => {
               activeCollection={{ type: collectionType, id: collectionId }}
               page={playlistPage}
               preferredPanel={view === "playlists" ? "playlists" : undefined}
+              mobileSection={mobileSection}
+              mobileRemovalsHref={buildHref({ mobileSection: "removals" })}
+              mobileLibraryHref={buildHref({ mobileSection: "library" })}
             />
           </aside>
         ) : null}

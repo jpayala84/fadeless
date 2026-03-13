@@ -3,11 +3,9 @@ import {
   buildSnapshot,
   diffSnapshots,
   type DiffResult,
-  type RemovalRecord,
   type RemovalEventRepository,
   type SnapshotRepository,
-  type SnapshotTarget,
-  type TrackSnapshot
+  type SnapshotTarget
 } from "@/lib/jobs/diff-engine";
 import { mapSpotifyError } from "@/lib/errors/spotify-errors";
 import type { ScanHealthRepository } from "@/lib/db/scan-health-repository";
@@ -87,7 +85,7 @@ export const runDailyScan = async (
           tracks: currentSnapshotData.length,
           removed: diff.removed.length
         });
-      } catch (recordError) {
+      } catch {
         console.warn("[ScanHealth] Failed to record success", {
           userId,
           scope: scopeLabel
@@ -110,7 +108,7 @@ export const runDailyScan = async (
           target,
           error: mapped
         });
-      } catch (recordError) {
+      } catch {
         console.warn("[ScanHealth] Failed to record failure", {
           userId,
           scope: scopeLabel

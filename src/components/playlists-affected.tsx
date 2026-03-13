@@ -28,7 +28,7 @@ export const PlaylistsAffected = ({ total, items, emptyMessage }: Props) => {
   };
 
   return (
-    <section className="surface-card space-y-4 rounded-3xl border border-border/40 bg-card/50 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur">
+    <section className="surface-card playlist-affected-shell space-y-4 rounded-3xl border border-emerald-200/20 bg-card/50 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-emerald-400/80">
@@ -52,7 +52,7 @@ export const PlaylistsAffected = ({ total, items, emptyMessage }: Props) => {
                     handleNavigate(item.dashboardHref);
                   }
                 }}
-                className="relative rounded-2xl border border-border/40 bg-card/40 px-4 py-3 text-left text-sm transition hover:border-emerald-300/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                className="neon-row-card playlist-affected-card relative rounded-2xl border border-emerald-200/20 bg-card/40 px-4 py-3 text-left text-sm transition hover:border-emerald-200/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
               >
                 <div className="flex items-center gap-3">
                   {item.imageUrl ? (

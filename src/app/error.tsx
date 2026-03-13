@@ -27,7 +27,7 @@ const ErrorPage = ({ error, reset }: Props) => {
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
+            className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
           >
             Try again
           </button>

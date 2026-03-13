@@ -84,6 +84,22 @@ export const useLikedBaselineBanner = (
     };
   }, [completed, started]);
 
+  useEffect(() => {
+    if (!started || completed) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [started, completed]);
+
   return {
     completed,
     indexedCount,

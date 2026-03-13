@@ -1,6 +1,9 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
+
 import { useLikedBaselineBanner } from "@/lib/scan/use-liked-baseline-banner";
+import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -40,13 +43,14 @@ export const LikedBaselineBanner = ({
           </p>
         </div>
         {!started ? (
-          <button
+          <Button
             type="button"
             onClick={start}
-            className="rounded-full border border-border/40 bg-card/40 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground"
+            className="gap-2 bg-emerald-400 text-slate-900 hover:bg-emerald-300"
           >
+            <Sparkles className="h-4 w-4" />
             Start
-          </button>
+          </Button>
         ) : (
           <div className="text-right text-xs text-muted-foreground">
             {indexedCount.toLocaleString()} / {totalCount.toLocaleString()}
@@ -67,9 +71,12 @@ export const LikedBaselineBanner = ({
           <div
             className="mt-2 flex items-center justify-between text-xs text-muted-foreground"
           >
-            <span>{message ?? "Indexing…"}</span>
+            <span>{message ?? "Scanning your library…"}</span>
             <span>{percent}%</span>
           </div>
+          <p className="mt-2 text-xs text-yellow-400">
+            Keep this page open until the first scan finishes to avoid sync issues.
+          </p>
         </div>
       ) : null}
     </div>

@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { PageNav } from "@/components/page-nav";
 
 const PrivacyPage = () => (
-  <main className="min-h-screen bg-background text-foreground">
-    <section className="mx-auto max-w-3xl space-y-6 px-6 py-16">
+  <main className="min-h-screen bg-background text-foreground flex flex-col">
+    <section className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-16">
       <header className="space-y-3">
         <PageNav />
         <p className="text-xs uppercase tracking-[0.35em] text-emerald-400">
@@ -76,6 +77,17 @@ const PrivacyPage = () => (
         </div>
       </section>
     </section>
+    <footer className="mx-auto w-full max-w-3xl px-6 pb-6 md:pb-8">
+      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <Link href="/privacy" className="underline-offset-4 transition hover:text-foreground hover:underline">
+          Privacy Policy
+        </Link>
+        <span aria-hidden="true">•</span>
+        <Link href="/terms" className="underline-offset-4 transition hover:text-foreground hover:underline">
+          Terms of Service
+        </Link>
+      </div>
+    </footer>
   </main>
 );
 

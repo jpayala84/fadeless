@@ -1,9 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Home, Settings } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/auth/current-user";
-import { SignOutButton } from "@/components/auth-buttons";
+import { AccountMenuDropdown } from "@/components/account-menu-dropdown";
 
 type Props = {
   user: CurrentUser;
@@ -11,63 +9,28 @@ type Props = {
 };
 
 export const DashboardHeader = ({ user, view }: Props) => (
-  <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/30 bg-background/40 px-6 py-6 backdrop-blur">
-    <div className="space-y-2">
-      <p className="text-xs uppercase tracking-[0.4em] text-emerald-300">
-        Fadeless
-      </p>
-      <h1 className="text-3xl font-semibold">
-        Welcome back{user.displayName ? `, ${user.displayName}` : "."}
-      </h1>
-    </div>
-    <div className="flex items-center gap-3">
+  <header className="mobile-dashboard-header relative z-[70] flex items-start justify-between gap-2.5 overflow-visible border-b border-border/20 bg-background/30 px-4 py-3.5 backdrop-blur md:px-8 md:py-6">
+    <div className="min-w-0 space-y-1">
       <Link
         href="/"
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-border/40 text-muted-foreground transition hover:text-foreground"
-        aria-label="Home"
+        className="inline-flex text-[0.8rem] font-medium uppercase tracking-[0.38em] text-green-500 transition hover:text-green-400 md:text-sm md:tracking-[0.44em]"
       >
-        <Home className="h-5 w-5" />
+        FADELESS
       </Link>
-      <Link
-        href={view === "settings" ? "/" : "/?view=settings"}
-        className={`flex h-11 w-11 items-center justify-center rounded-full border transition ${
-          view === "settings"
-            ? "border-emerald-400/50 bg-emerald-400/10 text-foreground"
-            : "border-border/40 text-muted-foreground hover:text-foreground"
-        }`}
-        aria-label={view === "settings" ? "Back to dashboard" : "Settings"}
-      >
-        {view === "settings" ? (
-          <ArrowLeft className="h-5 w-5" />
-        ) : (
-          <Settings className="h-5 w-5" />
-        )}
-      </Link>
-      <a
-        href={`https://open.spotify.com/user/${user.id}`}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-2"
-        aria-label="Open Spotify profile"
-      >
-        {user.avatarUrl ? (
-          <Image
-            src={user.avatarUrl}
-            alt={user.displayName ?? "Spotify user avatar"}
-            width={44}
-            height={44}
-            className="h-11 w-11 rounded-full border border-border/40 object-cover"
-          />
-        ) : (
-          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border/40 bg-card/40 text-xs font-semibold">
-            {(user.displayName ?? "SP").slice(0, 2).toUpperCase()}
-          </div>
-        )}
-        <span className="text-sm font-medium">
+      <h1 className="hidden text-[2.2rem] font-normal tracking-tight md:block md:text-[3.05rem]">
+        Welcome back{user.displayName ? `, ${user.displayName}` : "."}
+      </h1>
+      <div className="md:hidden">
+        <p className="text-[1.72rem] leading-[1] font-normal tracking-[-0.02em]">
+          Welcome back,
+        </p>
+        <p className="mt-0.5 max-w-[12.2ch] break-words text-[1.72rem] leading-[1] font-normal tracking-[-0.02em]">
           {user.displayName ?? "Spotify user"}
-        </span>
-      </a>
-      <SignOutButton />
+        </p>
+      </div>
+    </div>
+    <div className="mobile-dashboard-actions flex shrink-0 items-start md:items-center">
+      <AccountMenuDropdown user={user} view={view} />
     </div>
   </header>
 );

@@ -8,6 +8,7 @@ export type PageSearchParams = {
   playlist?: string;
   playlistPage?: string;
   view?: DashboardView;
+  mobileSection?: "library" | "removals";
   collection?: string;
   collectionId?: string;
   collectionName?: string;
@@ -15,6 +16,8 @@ export type PageSearchParams = {
   error?: string;
   reason?: string;
   errorId?: string;
+  preview?: string;
+  devtools?: string;
 };
 
 export type DashboardParams = {
