@@ -15,9 +15,9 @@ export const LandingHero = ({ authError, errorId }: LandingHeroProps) => {
 
   return (
     <section className="landing-home min-h-screen bg-background text-foreground">
-      <div className="landing-shell mx-auto flex w-full max-w-6xl flex-col gap-9 px-6 pb-6 pt-6 md:px-12 md:pb-16 md:pt-8 xl:gap-12 xl:px-24 xl:pt-28">
-        <div className="landing-main-stack flex w-full flex-col gap-8 xl:flex-row xl:items-stretch xl:justify-between xl:gap-16">
-          <div className="landing-left-stack flex max-w-[640px] flex-1 flex-col xl:justify-between">
+      <div className="landing-shell mx-auto flex w-full max-w-6xl flex-col gap-9 px-6 pb-6 pt-6 md:px-12 md:pb-16 md:pt-8 min-[1240px]:gap-12 min-[1240px]:px-24 min-[1240px]:pt-28">
+        <div className="landing-main-stack flex w-full flex-col gap-8 min-[1240px]:flex-row min-[1240px]:items-stretch min-[1240px]:justify-between min-[1240px]:gap-16">
+          <div className="landing-left-stack flex max-w-[640px] flex-1 flex-col min-[1240px]:justify-between">
             <div className="landing-hero-copy-group space-y-5">
               <p className="landing-brand text-sm font-medium uppercase tracking-[0.48em] text-emerald-300/85">
                 FADELESS
