@@ -53,9 +53,14 @@ const HomePage = async ({ searchParams }: PageProps) => {
 
   if (!user) {
     const authError = getLandingAuthError(resolvedSearchParams);
+    const showSwitchAccountLink = resolvedSearchParams?.loggedOut === "1";
     return (
       <main className="min-h-screen bg-background text-foreground">
-        <LandingHero authError={authError} errorId={resolvedSearchParams?.errorId} />
+        <LandingHero
+          authError={authError}
+          errorId={resolvedSearchParams?.errorId}
+          showSwitchAccountLink={showSwitchAccountLink}
+        />
       </main>
     );
   }

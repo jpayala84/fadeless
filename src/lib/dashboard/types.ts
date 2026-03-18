@@ -18,6 +18,7 @@ export type PageSearchParams = {
   errorId?: string;
   preview?: string;
   devtools?: string;
+  loggedOut?: string;
 };
 
 export type DashboardParams = {

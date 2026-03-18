@@ -7,9 +7,10 @@ import { getAccessRequestUrl, type LandingAuthError } from "@/lib/marketing/acce
 type LandingHeroProps = {
   authError?: LandingAuthError | null;
   errorId?: string;
+  showSwitchAccountLink?: boolean;
 };
 
-export const LandingHero = ({ authError, errorId }: LandingHeroProps) => {
+export const LandingHero = ({ authError, errorId, showSwitchAccountLink = false }: LandingHeroProps) => {
   const showLimitedAccess = authError?.title === "Limited beta access";
   const showInlineAuthError = Boolean(authError) && !showLimitedAccess;
 
@@ -52,6 +53,16 @@ export const LandingHero = ({ authError, errorId }: LandingHeroProps) => {
                     </Link>
                   ) : null}
                 </div>
+              </div>
+            ) : null}
+            {showSwitchAccountLink ? (
+              <div className="mt-4 flex w-full max-w-[560px] justify-center">
+                <Link
+                  href="/api/auth/login?switch_account=1"
+                  className="landing-cta landing-signin-cta inline-flex h-10 w-fit items-center justify-center rounded-full px-5 text-sm font-medium text-foreground transition"
+                >
+                  Use a different Spotify account
+                </Link>
               </div>
             ) : null}
           </div>

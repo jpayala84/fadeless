@@ -12,7 +12,7 @@ export const useSignOut = () => {
           method: "POST"
         });
       } finally {
-        window.location.href = "/";
+        window.location.href = "/?loggedOut=1";
       }
     });
   };
