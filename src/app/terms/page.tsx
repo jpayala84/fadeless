@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PageNav } from "@/components/page-nav";
+import { PageNav } from "@/components/navigation/page-nav";
 
 const TermsPage = () => (
   <main className="min-h-screen bg-background text-foreground flex flex-col">

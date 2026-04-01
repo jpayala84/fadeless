@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { ChevronDown, Home, Settings, UserRound } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/auth/current-user";
-import { AccountMenuSignOutItem } from "@/components/account-menu-signout-item";
+import { AccountMenuSignOutItem } from "@/components/auth/account-menu-signout-item";
 
 type AccountMenuDropdownProps = {
   user: CurrentUser;

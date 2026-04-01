@@ -17,10 +17,6 @@ export type RemovalRecord = TrackSnapshot & {
 
 export type DiffResult = {
   removed: RemovalRecord[];
-  potentialReplacements: Array<{
-    previous: TrackSnapshot;
-    next: SpotifyTrack;
-  }>;
 };
 
 export type SnapshotTarget =
@@ -60,11 +56,7 @@ export const diffSnapshots = (
       removedAt
     }));
 
-  return {
-    removed,
-    potentialReplacements: []
-    // TODO: compare metadata similarity to propose replacements.
-  };
+  return { removed };
 };
 
 export const buildSnapshot = ({

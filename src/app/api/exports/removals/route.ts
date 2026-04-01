@@ -15,9 +15,7 @@ const buildCsv = (rows: ReturnType<typeof toExportRows>) => {
     "album_name",
     "playlist_names",
     "playlist_ids",
-    "track_id",
-    "replacement_track_id",
-    "replacement_track_name"
+    "track_id"
   ];
   const escape = (value: string) =>
     `"${value.replace(/"/g, '""')}"`;
@@ -29,9 +27,7 @@ const buildCsv = (rows: ReturnType<typeof toExportRows>) => {
     row.albumName,
     row.playlistNames,
     row.playlistIds,
-    row.trackId,
-    row.replacementTrackId ?? "",
-    row.replacementTrackName ?? ""
+    row.trackId
   ]);
 
   return [header, ...lines]
@@ -47,9 +43,7 @@ const toExportRows = (events: Awaited<ReturnType<typeof listRemovalEvents>>) =>
     albumName: event.albumName,
     playlistNames: event.playlistNames.join(" | "),
     playlistIds: event.playlistIds.join(" | "),
-    trackId: event.trackId,
-    replacementTrackId: event.replacementTrackId ?? null,
-    replacementTrackName: event.replacementTrackName ?? null
+    trackId: event.trackId
   }));
 
 export async function GET(request: Request) {

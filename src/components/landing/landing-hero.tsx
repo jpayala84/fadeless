@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 
-import { SignInButton } from "@/components/auth-buttons";
+import { SignInButton } from "@/components/auth/auth-buttons";
 import { getAccessRequestUrl, type LandingAuthError } from "@/lib/marketing/access-request";
 
 type LandingHeroProps = {

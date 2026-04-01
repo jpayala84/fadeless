@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 
 ## Product Summary
-A minimal web application that tracks Spotify songs removed or replaced in a user’s library or playlists due to reposts, rights changes, or new track IDs. The app detects silent removals, records them, and notifies users.
+A minimal web application that tracks Spotify songs removed in a user’s library or playlists due to reposts, rights changes, or new track IDs. The app detects silent removals, records them, and notifies users.
 
 The product focuses on reliability, clarity, and preservation of a user’s music history.
 
@@ -20,7 +20,7 @@ Spotify silently removes tracks from playlists and Liked Songs when songs are re
 ---
 
 ## Core Goals
-1. Detect removed or replaced Spotify tracks
+1. Detect removed Spotify tracks
 2. Preserve historical records (non-destructive)
 3. Notify users of changes
 4. Provide a clean, accessible UI
@@ -51,7 +51,6 @@ Spotify silently removes tracks from playlists and Liked Songs when songs are re
 - Compare current vs previous snapshot
 - Detect:
   - Removed tracks
-  - Potential replacements (same metadata, new ID)
 - Idempotent and reliable processing
 
 ### UI
@@ -71,8 +70,6 @@ Spotify silently removes tracks from playlists and Liked Songs when songs are re
 ---
 
 ## Post-MVP Features
-- AI-assisted replacement suggestions
-- Confidence scoring for matches
 - One-click re-add (explicit user action)
 - UI color theme presets
 - Feedback form

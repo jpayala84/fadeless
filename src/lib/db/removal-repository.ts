@@ -62,8 +62,6 @@ export type RemovalEventDTO = {
   playlistNames: string[];
   playlistIds: string[];
   removedAt: Date;
-  replacementTrackId?: string | null;
-  replacementTrackName?: string | null;
   albumImageUrl?: string;
 };
 
@@ -76,9 +74,7 @@ const mapEvent = (event: RemovalEvent): RemovalEventDTO => {
     albumName: event.albumName,
     playlistNames: event.playlistNames,
     playlistIds: event.playlistIds,
-    removedAt: event.removedAt,
-    replacementTrackId: event.replacementTrackId,
-    replacementTrackName: event.replacementTrackName
+    removedAt: event.removedAt
   };
 };
 

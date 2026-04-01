@@ -68,8 +68,7 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({
-      removed: diff.removed.length,
-      potentialReplacements: diff.potentialReplacements.length
+      removed: diff.removed.length
     });
   } catch (error) {
     const mapped = mapSpotifyError(error);

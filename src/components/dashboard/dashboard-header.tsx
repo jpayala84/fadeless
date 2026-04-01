@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { CurrentUser } from "@/lib/auth/current-user";
-import { AccountMenuDropdown } from "@/components/account-menu-dropdown";
+import { AccountMenuDropdown } from "@/components/auth/account-menu-dropdown";
 
 type Props = {
   user: CurrentUser;

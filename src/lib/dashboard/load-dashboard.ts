@@ -249,11 +249,6 @@ export const loadDashboardData = async (options: {
         acknowledgedIds.forEach((id) => combinedIds.add(id));
         existing.playlistIds = Array.from(combinedIds);
       }
-
-      if (!existing.replacementTrackId && event.replacementTrackId) {
-        existing.replacementTrackId = event.replacementTrackId;
-        existing.replacementTrackName = event.replacementTrackName;
-      }
       if (!existing.albumImageUrl && event.albumImageUrl) {
         existing.albumImageUrl = event.albumImageUrl;
       }

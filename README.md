@@ -1,137 +1,151 @@
 # Fadeless
 
-A minimal web app that tracks Spotify songs removed or replaced from your playlists or Liked Songs due to reposts, rights changes, or new track IDs.
+Track Spotify songs that disappear from your Liked Songs or playlists, preserve the history, and get weekly alerts.
 
-## Why This Exists
-Spotify silently removes songs when artists repost them under new IDs. This app makes those changes visible and preserves your personal music history.
+Live app: [https://fadeless.app](https://fadeless.app)
 
----
+## Product Summary
+Spotify can remove tracks silently when rights change or songs are re-uploaded under new IDs. Fadeless gives users visibility into those removals by taking snapshots, diffing them over time, and keeping an archive.
 
-## Features (MVP)
-- Spotify OAuth login
-- Track Liked Songs and playlists
-- Detect removed or replaced tracks
-- Weekly change summaries
-- Clean, Spotify-inspired UI
+## What Fadeless Does Today
+- Authenticates users with Spotify OAuth 2.0 + PKCE (no passwords stored)
+- Scans Liked Songs and monitored playlists for removals
+- Stores append-only snapshots and removal events in PostgreSQL
+- Shows weekly and all-time removal history in the dashboard
+- Supports playlist-level monitoring toggles (up to 5 playlists per user)
+- Sends weekly digest emails (Resend) or in-app notification badges
+- Exports removal history as JSON or CSV
+- Supports user data deletion from the settings page
 
----
+## Screenshots
+### Landing And Spotify Sign-In
+![Landing and Spotify sign-in](./public/screenshots/landing-login-desktop.png)
+
+### Removal Detection Dashboard
+![Removal detection dashboard](./public/screenshots/dashboard-removals-desktop.png)
+
+### Playlist Monitoring Controls
+![Playlist monitoring controls](./public/screenshots/playlist-monitoring-desktop.png)
+
+### Settings, Notifications, Export, And Data Deletion
+![Settings, notifications, export, and data deletion](./public/screenshots/settings-desktop.png)
+
+### Mobile Library With In-App Notification Badges
+![Mobile library with in-app notification badges](./public/screenshots/mobile-library-badges.png)
+
+## Architecture
+- Frontend: Next.js App Router + React + TypeScript + Tailwind
+- Backend: Route Handlers + Server Actions + modular service layer
+- Database: PostgreSQL + Prisma
+- Jobs:
+  - On-demand scan route: `POST /api/jobs/scan`
+  - Netlify background scan worker: `/.netlify/functions/daily-scan`
+  - Weekly digest route: `POST /api/jobs/send-weekly-digest`
+- Scheduling:
+  - `.github/workflows/daily-scan.yml` triggers Netlify scan function every 6 hours
+  - `.github/workflows/weekly-digest.yml` triggers weekly digest every Monday
 
 ## Tech Stack
-- Next.js (App Router)
+- Next.js 16 (App Router)
+- React 19
 - TypeScript
 - Tailwind CSS
-- shadcn/ui (Radix)
+- shadcn/ui primitives (Radix)
+- Prisma ORM
 - PostgreSQL
-- Prisma
 - Spotify Web API
+- Resend (weekly digest email delivery)
 
----
-
-## Architecture Overview
-- Frontend: React + Next.js
-- Backend: Route Handlers / Server Actions
-- Database: PostgreSQL with Prisma
-- Jobs: Scheduled scans via cron
-- Optional AI: Embeddings for replacement matching
-
----
-
-## Security & Privacy
-- OAuth PKCE (no passwords stored)
-- Encrypted token storage
-- Read-only Spotify access
-- User data isolation
-- One-click data deletion
-
----
+## Security And Privacy
+- OAuth PKCE for Spotify authorization
+- Encrypted access and refresh tokens at rest (AES-256-GCM)
+- Signed, server-managed sessions
+- Least-privilege Spotify scopes (read-focused)
+- Basic API/job rate limiting
+- User-scoped data isolation
+- One-click history deletion
 
 ## Accessibility
-- Keyboard-first navigation
-- Semantic HTML
-- Accessible components
-- WCAG-compliant contrast
+- Semantic HTML and accessible component patterns
+- Keyboard navigation support
+- Visible focus states
+- Contrast-aware, Spotify-inspired UI choices
 
----
+## Current Limitations
+- Current release focuses on removal detection by exact Spotify track ID.
+- Spotify app allowlist behavior still applies while the Spotify app remains in development mode
 
-## Development Notes
-- Start with auth + Spotify client
-- Build the diff engine before UI
-- UI comes last
-- Reliability > features
+## Repository Layout
+- `src/app`: routes, API handlers, server actions
+- `src/components/auth`: auth and account menu UI
+- `src/components/dashboard`: dashboard-level UI sections
+- `src/components/library`: library browser panel and subviews
+- `src/components/landing`: logged-out landing experience
+- `src/components/navigation`: shared navigation components
+- `src/components/onboarding`: onboarding dialog flow
+- `src/components/scan`: manual scan form/button/status UI
+- `src/components/settings`: settings forms and controls
+- `src/lib`: business logic (auth, Spotify client/service, jobs, repositories, security, notifications)
+- `src/ui`: shared primitive UI components
+- `prisma`: schema and migrations
+- `netlify/functions`: Netlify scheduled/background scan handlers
 
----
+## Local Development
+### Prerequisites
+- Node.js 20+
+- PostgreSQL
+- Spotify developer app credentials
 
-## Status
-Early development / personal project
-
----
-
-## Development Setup
-1. Install dependencies (Node 18+): `npm install`
-2. Run the dev server: `npm run dev`
-3. Visit `http://localhost:3000`
-
-> Tooling: Next.js App Router + TypeScript + Tailwind + shadcn/ui primitives.
-
----
-
-## Project Layout
-- `src/app`: App Router routes + API handlers + server actions
-- `src/components`: UI building blocks (dashboard, notifications, scan form, auth buttons)
-- `src/lib`: Services (auth, Spotify API, Prisma repositories, jobs, encryption helpers)
-- `src/ui`: shadcn/ui components starting with `Button`
-- `requirements.md` / `agents.md`: Product + engineering rules (keep them close)
-
-Add TODO comments where requirements need clarification rather than guessing. Security, accessibility, and reliability directives in the PRD/agent brief remain authoritative.
-
----
+### Setup
+1. Install dependencies:
+   ```bash
+   npm ci
+   ```
+2. Create `.env.local` (see env table below).
+3. Apply Prisma migrations:
+   ```bash
+   npx prisma migrate dev
+   ```
+4. Start the app:
+   ```bash
+   npm run dev
+   ```
+5. Open `http://localhost:3000`.
 
 ## Environment Variables
-
 Create `.env.local` with:
 
-| Key | Description |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | Spotify app credentials |
-| `SPOTIFY_REDIRECT_URI` | Must match your Spotify app callback (e.g., `http://localhost:3000/api/auth/callback`) |
-| `SPOTIFY_SCOPES` | Optional override (defaults now include `user-read-email` plus read-only library/playlist scopes) |
-| `ENCRYPTION_SECRET` | 32+ byte secret for AES-GCM token encryption |
-| `SESSION_SECRET` | 32+ byte secret for signing session cookies |
-| `NEXT_PUBLIC_APP_URL` | Public base URL (e.g., `http://localhost:3000`) |
-| `RESEND_API_KEY` | (Optional) Resend API key for weekly digest emails |
-| `EMAIL_FROM` | Verified sender address for digests (e.g., `alerts@yourdomain.com`) |
+| Key | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `DIRECT_URL` | No | Optional direct PostgreSQL URL for Prisma |
+| `SPOTIFY_CLIENT_ID` | Yes | Spotify app client id |
+| `SPOTIFY_CLIENT_SECRET` | Yes | Spotify app client secret |
+| `SPOTIFY_REDIRECT_URI` | Yes | OAuth callback URL (for local: `http://localhost:3000/api/auth/callback`) |
+| `SPOTIFY_SCOPES` | No | Optional scope override |
+| `ENCRYPTION_SECRET` | Yes | 32+ byte secret for token encryption |
+| `SESSION_SECRET` | Yes | 32+ byte secret for session signing |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public app URL (`http://localhost:3000` locally) |
+| `RESEND_API_KEY` | No | Resend key for weekly email digests |
+| `EMAIL_FROM` | No | Verified sender address for digest emails |
 
----
+## API Endpoints (Key)
+- `GET /api/auth/login`
+- `GET /api/auth/callback`
+- `POST /api/auth/logout`
+- `POST /api/jobs/scan`
+- `POST /api/jobs/baseline-liked`
+- `POST /api/jobs/send-weekly-digest`
+- `GET /api/notifications/badges`
+- `GET /api/exports/removals?format=json|csv`
 
-## Database & Prisma
+## Quality Checks
+- Lint: `npm run lint`
+- Typecheck: `npm run typecheck`
+- Tests: `npm test`
 
-1. Update `DATABASE_URL` in `.env.local`.
-2. Run `npx prisma migrate dev` to create tables (User, Session, Snapshot, RemovalEvent, NotificationPreference).
-3. Regenerate the client when schema changes: `npx prisma generate`.
+## License
+MIT. See [LICENSE](./LICENSE).
 
-The snapshot repository and removal-event repository read/write via Prisma, keeping history append-only per requirements.
-
----
-
-## Spotify OAuth & Tokens
-
-- `/api/auth/login` kicks off OAuth PKCE (code verifier stored in httpOnly cookie).
-- `/api/auth/callback` exchanges the code, persists encrypted access/refresh tokens, fetches the Spotify profile, and establishes a signed session cookie.
-- `/api/auth/logout` destroys the DB-backed session.
-
-Tokens are encrypted at rest via AES-256-GCM (see `src/lib/security/encryption.ts`).
-
----
-
-## Detection Engine & Jobs
-
-- `runDailyScan` combines Liked Songs + playlist tracks, snapshots to PostgreSQL, and records removal events.
-- Kick it off manually via the “Run daily scan” button on the dashboard (server action) or call `POST /api/jobs/scan`.
-- For cron-style execution deploy an external scheduler (e.g., GitHub Actions, Fly, Railway) that hits the scan route per user daily.
-
----
-
-## Notifications
-
-Users can configure weekly summaries (email or in-app) from the dashboard. Preferences are stored in `NotificationPreference`. Email delivery uses Resend via the `POST /api/jobs/send-weekly-digest` route (triggered every Monday by `.github/workflows/weekly-digest.yml`). If a user opts into in-app notifications, playlists and the Liked Songs tile receive red badges whenever new removals are detected, keeping the UI lightweight while still signaling outstanding changes. Because `user-read-email` is part of the default Spotify scopes, users will be asked to grant access to their verified address the next time they log in.
+## Project Status
+Live and actively maintained portfolio project.

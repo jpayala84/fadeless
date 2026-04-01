@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 
 import { useRunScanForm } from "@/lib/scan/use-run-scan-form";
-import { RunScanButton } from "@/components/run-scan-button";
-import { ScanStatus } from "@/components/scan-status";
+import { RunScanButton } from "@/components/scan/run-scan-button";
+import { ScanStatus } from "@/components/scan/scan-status";
 import { cn } from "@/lib/utils";
 
 type Props = {
